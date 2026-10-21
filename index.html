@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>New Hit Movies</title>
+    <meta name="description" content="Browse new and popular movies, watch trailers and find where to watch.">
+    <meta name="theme-color" content="#101018">
+    <!-- Replace YOUR-SITE.com with your real domain before launch. -->
+    <link rel="canonical" href="https://YOUR-SITE.com/">
+
+    <!-- Link previews (WhatsApp, Facebook, X, Telegram). Replace the URLs with your own. -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://YOUR-SITE.com/">
+    <meta property="og:site_name" content="New Hit Movies">
+    <meta property="og:title" content="New Hit Movies">
+    <meta property="og:description" content="Browse new and popular movies, watch trailers and find where to watch.">
+    <meta property="og:image" content="https://YOUR-SITE.com/og-image.jpg">
+    <meta name="twitter:card" content="summary_large_image">
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+ 
+<body id="top">
+
+<header class="site-header">
+    <a class="logo" href="#top" aria-label="New Hit Movies, home">
+        <img src="logo.png" alt="New Hit Movies Logo" class="site-logo">
+        <span>New Hit Movies</span>
+    </a>
+
+    <nav aria-label="Main">
+        <a href="#top">Home</a>
+        <a href="#about">About</a>
+    </nav>
+</header>
+
+
+    <main id="main">
+        <noscript>
+            <p class="status" style="padding:25px 20px">Please turn on JavaScript to browse movies.</p>
+        </noscript>
+        <!-- HOME VIEW -->
+        <div id="home-view">
+            <section id="featured" class="featured" aria-label="Featured movie" hidden></section>
+
+            <section class="browse" id="movies">
+                <div class="controls">
+                    <label class="sr-only" for="search">Search movies</label>
+                    <input id="search" type="search" placeholder="Search movies" autocomplete="off">
+
+                    <label class="sr-only" for="genre">Filter by genre</label>
+                    <select id="genre">
+                        <option value="all">All genres</option>
+                    </select>
+
+                    <label class="sr-only" for="sort">Sort movies</label>
+                    <select id="sort">
+                        <option value="newest">Newest first</option>
+                        <option value="oldest">Oldest first</option>
+                        <option value="rating">Top rated</option>
+                        <option value="az">A to Z</option>
+                    </select>
+                </div>
+
+                <p id="movie-count" class="status" aria-live="polite"></p>
+                <p id="movie-status" class="status" role="status" aria-live="polite">Loading movies...</p>
+
+                <div id="movie-list" class="movies"></div>
+
+                <p id="no-results" class="status" hidden>No movies match your search. Try a different title or genre.</p>
+                <div class="load-more-wrap">
+                    <button id="load-more" class="btn btn-secondary" type="button" hidden>Load more</button>
+                </div>
+            </section>
+
+            <section id="about" class="about">
+                <h2>About</h2>
+                <p>New Hit Movies helps you discover new films, watch trailers and find where to watch them.</p>
+            </section>
+        </div>
+
+        <!-- DETAILS VIEW -->
+        <section id="details-view" class="details-view" hidden></section>
+    </main>
+
+    <footer class="site-footer">
+        <nav aria-label="Legal">
+            <a href="privacy.html">Privacy Policy</a>
+            <a href="terms.html">Terms</a>
+            <a href="dmca.html">DMCA</a>
+            <a href="contact.html">Contact</a>
+        </nav>
+        <p>&copy; 2026 New Hit Movies. All movie titles and images belong to their owners.</p>
+    </footer>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>

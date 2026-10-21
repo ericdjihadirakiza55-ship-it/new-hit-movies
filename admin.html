@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Admin | New Hit Movies</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .admin { max-width: 760px; margin: 0 auto; padding: 25px 20px; }
+        .admin h1 { color: var(--accent); margin-top: 0; }
+        .panel-box {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 18px;
+            margin-bottom: 24px;
+        }
+        .field { display: block; margin-bottom: 14px; }
+        .field span { display: block; margin-bottom: 4px; color: var(--muted); font-size: 14px; }
+        .field input, .field select, .field textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            background: var(--bg);
+            color: #fff;
+            font: inherit;
+        }
+        .field textarea { min-height: 110px; resize: vertical; }
+        .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .form-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+        .message { min-height: 1.5em; margin: 12px 0 0; }
+        .message.error { color: #ff7b7b; }
+        .message.ok { color: #7bffa8; }
+        .admin-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--line);
+        }
+        .admin-item:last-child { border-bottom: none; }
+        .admin-item p { margin: 0; }
+        .admin-item .sub { color: var(--muted); font-size: 13px; }
+        .btn-danger { background: #7a1c1c; }
+        .btn-danger:hover { background: #a02525; }
+        .topbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+    </style>
+</head>
+<body>
+    <div class="admin">
+        <div class="topbar">
+            <h1>Admin</h1>
+            <a href="index.html">View site</a>
+        </div>
+
+        <!-- Login -->
+        <section id="login-box" class="panel-box" hidden>
+            <h2>Log in</h2>
+            <form id="login-form">
+                <label class="field"><span>Email</span>
+                    <input id="email" type="email" autocomplete="username" required>
+                </label>
+                <label class="field"><span>Password</span>
+                    <input id="password" type="password" autocomplete="current-password" required>
+                </label>
+                <button class="btn" type="submit">Log in</button>
+                <p id="login-message" class="message error" role="alert"></p>
+            </form>
+        </section>
+
+        <!-- Admin panel -->
+        <div id="panel" hidden>
+            <p><button id="logout" class="btn btn-secondary" type="button">Log out</button></p>
+
+            <section class="panel-box">
+                <h2 id="form-title">Add a movie</h2>
+                <form id="movie-form">
+                    <label class="field"><span>Title *</span>
+                        <input id="f-title" type="text" required>
+                    </label>
+
+                    <div class="row">
+                        <label class="field"><span>Genre *</span>
+                            <select id="f-genre" required>
+                                <option value="">Choose genre</option>
+                                <option value="action">Action</option>
+                                <option value="comedy">Comedy</option>
+                                <option value="animation">Animation</option>
+                                <option value="fantasy">Fantasy</option>
+                                <option value="scifi">Sci-Fi</option>
+                                <option value="horror">Horror</option>
+                                <option value="drama">Drama</option>
+                                <option value="romance">Romance</option>
+                            </select>
+                        </label>
+                        <label class="field"><span>Year</span>
+                            <input id="f-year" type="number" min="1900" max="2100">
+                        </label>
+                    </div>
+
+                    <div class="row">
+                        <label class="field"><span>Release date</span>
+                            <input id="f-releaseDate" type="date">
+                        </label>
+                        <label class="field"><span>Rating (0 to 10)</span>
+                            <input id="f-rating" type="number" min="0" max="10" step="0.1">
+                        </label>
+                    </div>
+
+                    <div class="row">
+                        <label class="field"><span>Runtime (minutes)</span>
+                            <input id="f-runtime" type="number" min="1">
+                        </label>
+                        <label class="field"><span>Director</span>
+                            <input id="f-director" type="text">
+                        </label>
+                    </div>
+
+                    <label class="field"><span>Cast (separate names with commas)</span>
+                        <input id="f-cast" type="text">
+                    </label>
+
+                    <label class="field"><span>Description</span>
+                        <textarea id="f-description"></textarea>
+                    </label>
+
+                    <label class="field"><span>Poster image link (https)</span>
+                        <input id="f-posterUrl" type="url" placeholder="https://">
+                    </label>
+                    <label class="field"><span>Watch link (https)</span>
+                        <input id="f-watchUrl" type="url" placeholder="https://">
+                    </label>
+                    <label class="field"><span>Download link (https)</span>
+                        <input id="f-downloadUrl" type="url" placeholder="https://">
+                    </label>
+                    <label class="field"><span>YouTube trailer link</span>
+                        <input id="f-trailerUrl" type="url" placeholder="https://www.youtube.com/watch?v=...">
+                    </label>
+
+                    <div class="form-actions">
+                        <button id="save" class="btn" type="submit">Save movie</button>
+                        <button id="cancel" class="btn btn-secondary" type="button" hidden>Cancel editing</button>
+                    </div>
+                    <p id="form-message" class="message" role="status" aria-live="polite"></p>
+                </form>
+            </section>
+
+            <section class="panel-box">
+                <h2>Your movies</h2>
+                <div id="admin-list"><p class="status">Loading...</p></div>
+            </section>
+        </div>
+    </div>
+
+    <script type="module" src="admin.js"></script>
+</body>
+</html>
