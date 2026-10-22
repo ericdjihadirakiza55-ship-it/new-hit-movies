@@ -6,17 +6,23 @@
     <title>DMCA and Copyright | New Hit Movies</title>
     <meta name="description" content="How to report copyright infringement on New Hit Movies.">
     <meta name="theme-color" content="#101018">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
+    <link rel="icon" href="logo.png">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <a class="skip-link" href="#main">Skip to content</a>
 
     <header class="site-header">
-        <a class="logo" href="index.html" aria-label="New Hit Movies, home">🎬 New Hit Movies</a>
-        <nav aria-label="Main">
-            <a href="index.html">Home</a>
+        <a class="logo" href="index.html" aria-label="New Hit Movies, home">
+            <img src="logo-small.png" alt="" width="36" height="36"><span>New Hit Movies</span>
+        </a>
+        <button id="menu-toggle" class="menu-toggle" type="button" aria-expanded="false" aria-controls="main-nav" aria-label="Menu">&#9776;</button>
+        <nav class="main-nav" id="main-nav" aria-label="Main">
+            <a href="index.html#all">Home</a>
+            <a href="index.html#movies">Movies</a>
+            <a href="index.html#series">Series</a>
             <a href="index.html#about">About</a>
+            <a href="request.html">Request</a>
         </nav>
     </header>
 
@@ -27,7 +33,7 @@
         <p>We respect the rights of copyright owners and respond to valid notices of infringement. New Hit Movies does not host movie files. The site shows information and links to other websites.</p>
 
         <h2>Reporting infringement</h2>
-        <p>If you believe material on this site infringes your copyright, send a written notice to <a href="mailto:newhitmovies56@gmail.com">newhitmovies56gmail.com</a> that includes:</p>
+        <p>If you believe material on this site infringes your copyright, send a written notice to <a href="mailto:newhitmovies56@gmail.com">newhitmovies56@gmail.com</a> that includes:</p>
         <ol>
             <li>Your name, address, phone number and email.</li>
             <li>A description of the copyrighted work you claim is infringed.</li>
@@ -54,9 +60,19 @@
             <a href="privacy.html">Privacy Policy</a>
             <a href="terms.html">Terms</a>
             <a href="dmca.html">DMCA</a>
+            <a href="request.html">Request a Movie</a>
             <a href="contact.html">Contact</a>
         </nav>
         <p>&copy; 2026 New Hit Movies. All movie titles and images belong to their owners.</p>
     </footer>
+<script>
+        (function () {
+            var b = document.getElementById("menu-toggle"), n = document.getElementById("main-nav");
+            b.addEventListener("click", function () {
+                var open = n.classList.toggle("open");
+                b.setAttribute("aria-expanded", String(open));
+            });
+        })();
+    </script>
 </body>
 </html>

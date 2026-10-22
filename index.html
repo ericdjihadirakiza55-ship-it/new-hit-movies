@@ -7,38 +7,39 @@
     <meta name="description" content="Browse new and popular movies, watch trailers and find where to watch.">
     <meta name="theme-color" content="#101018">
     <!-- Replace YOUR-SITE.com with your real domain before launch. -->
-    <link rel="canonical" href="https://YOUR-SITE.com/">
+    <link rel="canonical" href="https://new-hit-movies.newhitmovies.workers.dev/">
 
     <!-- Link previews (WhatsApp, Facebook, X, Telegram). Replace the URLs with your own. -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://YOUR-SITE.com/">
+    <meta property="og:url" content="https://new-hit-movies.newhitmovies.workers.dev/">
     <meta property="og:site_name" content="New Hit Movies">
     <meta property="og:title" content="New Hit Movies">
     <meta property="og:description" content="Browse new and popular movies, watch trailers and find where to watch.">
-    <meta property="og:image" content="https://YOUR-SITE.com/og-image.jpg">
+    <meta property="og:image" content="https://new-hit-movies.newhitmovies.workers.dev/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
     <meta name="twitter:card" content="summary_large_image">
 
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
+    <link rel="icon" href="logo.png">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <a class="skip-link" href="#main">Skip to content</a>
 
- 
-<body id="top">
-
-<header class="site-header">
-    <a class="logo" href="#top" aria-label="New Hit Movies, home">
-        <img src="logo.png" alt="New Hit Movies Logo" class="site-logo">
-        <span>New Hit Movies</span>
-    </a>
-
-    <nav aria-label="Main">
-        <a href="#top">Home</a>
-        <a href="#about">About</a>
-    </nav>
-</header>
-
+    <header class="site-header">
+        <a class="logo" href="#all" aria-label="New Hit Movies, home">
+            <img src="logo-small.png" alt="" width="36" height="36"><span>New Hit Movies</span>
+        </a>
+        <button id="menu-toggle" class="menu-toggle" type="button" aria-expanded="false" aria-controls="main-nav" aria-label="Menu">&#9776;</button>
+        <nav id="main-nav" class="main-nav" aria-label="Main">
+            <a href="#all">Home</a>
+            <a href="#movies">Movies</a>
+            <a href="#series">Series</a>
+            <a href="#about">About</a>
+            <a href="request.html">Request</a>
+        </nav>
+    </header>
 
     <main id="main">
         <noscript>
@@ -48,10 +49,19 @@
         <div id="home-view">
             <section id="featured" class="featured" aria-label="Featured movie" hidden></section>
 
-            <section class="browse" id="movies">
+            <div id="rows" class="rows"></div>
+
+            <section class="browse" id="browse">
                 <div class="controls">
                     <label class="sr-only" for="search">Search movies</label>
-                    <input id="search" type="search" placeholder="Search movies" autocomplete="off">
+                    <input id="search" type="search" placeholder="Search movies and series" autocomplete="off">
+
+                    <label class="sr-only" for="type">Filter by type</label>
+                    <select id="type">
+                        <option value="all">Movies and series</option>
+                        <option value="movie">Movies only</option>
+                        <option value="series">Series only</option>
+                    </select>
 
                     <label class="sr-only" for="genre">Filter by genre</label>
                     <select id="genre">
@@ -80,7 +90,7 @@
 
             <section id="about" class="about">
                 <h2>About</h2>
-                <p>New Hit Movies helps you discover new films, watch trailers and find where to watch them.</p>
+                <p>New Hit Movies helps you discover new films and series, watch trailers and find where to watch them.</p>
             </section>
         </div>
 
@@ -93,6 +103,7 @@
             <a href="privacy.html">Privacy Policy</a>
             <a href="terms.html">Terms</a>
             <a href="dmca.html">DMCA</a>
+            <a href="request.html">Request a Movie</a>
             <a href="contact.html">Contact</a>
         </nav>
         <p>&copy; 2026 New Hit Movies. All movie titles and images belong to their owners.</p>

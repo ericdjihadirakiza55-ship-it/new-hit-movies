@@ -47,6 +47,7 @@
         .admin-item .sub { color: var(--muted); font-size: 13px; }
         .btn-danger { background: #7a1c1c; }
         .btn-danger:hover { background: #a02525; }
+        .season-box { border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-bottom: 12px; }
         .topbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
     </style>
 </head>
@@ -79,6 +80,13 @@
             <section class="panel-box">
                 <h2 id="form-title">Add a movie</h2>
                 <form id="movie-form">
+                    <label class="field"><span>Type</span>
+                        <select id="f-type">
+                            <option value="movie">Movie</option>
+                            <option value="series">Series (with seasons)</option>
+                        </select>
+                    </label>
+
                     <label class="field"><span>Title *</span>
                         <input id="f-title" type="text" required>
                     </label>
@@ -112,10 +120,10 @@
                     </div>
 
                     <div class="row">
-                        <label class="field"><span>Runtime (minutes)</span>
+                        <label class="field"><span id="runtime-label">Runtime (minutes)</span>
                             <input id="f-runtime" type="number" min="1">
                         </label>
-                        <label class="field"><span>Director</span>
+                        <label class="field"><span id="director-label">Director</span>
                             <input id="f-director" type="text">
                         </label>
                     </div>
@@ -127,6 +135,12 @@
                     <label class="field"><span>Description</span>
                         <textarea id="f-description"></textarea>
                     </label>
+
+                    <div id="seasons-box" hidden>
+                        <h3>Seasons</h3>
+                        <div id="seasons-list"></div>
+                        <p><button id="add-season" class="btn btn-secondary" type="button">+ Add season</button></p>
+                    </div>
 
                     <label class="field"><span>Poster image link (https)</span>
                         <input id="f-posterUrl" type="url" placeholder="https://">

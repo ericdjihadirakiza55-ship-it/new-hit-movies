@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Request a Movie or Report a Problem | New Hit Movies</title>
+    <meta name="description" content="Ask us to add a movie or series, or report a broken link.">
+    <meta name="theme-color" content="#101018">
+    <link rel="icon" href="logo.png">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header">
+        <a class="logo" href="index.html" aria-label="New Hit Movies, home">
+            <img src="logo-small.png" alt="" width="36" height="36"><span>New Hit Movies</span>
+        </a>
+        <button id="menu-toggle" class="menu-toggle" type="button" aria-expanded="false" aria-controls="main-nav" aria-label="Menu">&#9776;</button>
+        <nav class="main-nav" id="main-nav" aria-label="Main">
+            <a href="index.html#all">Home</a>
+            <a href="index.html#movies">Movies</a>
+            <a href="index.html#series">Series</a>
+            <a href="index.html#about">About</a>
+            <a href="request.html">Request</a>
+        </nav>
+    </header>
+
+    <main id="main" class="legal">
+        <h1>Request a Movie or Report a Problem</h1>
+        <p>Want a movie or series added, or found a broken link? Tell us here.</p>
+
+        <form id="request-form" class="request-form">
+            <label class="field"><span>What is this about?</span>
+                <select id="r-type">
+                    <option value="request">Request a movie or series</option>
+                    <option value="report">Report a broken link or problem</option>
+                    <option value="other">Something else</option>
+                </select>
+            </label>
+
+            <label class="field"><span>Movie or series title *</span>
+                <input id="r-title" type="text" maxlength="120" required>
+            </label>
+
+            <label class="field"><span>Details (optional)</span>
+                <textarea id="r-message" maxlength="500" placeholder="For example: the year, or what is not working."></textarea>
+            </label>
+
+            <!-- Hidden spam trap: real visitors never fill this in. -->
+            <div class="hp" aria-hidden="true">
+                <label>Website <input id="r-website" type="text" tabindex="-1" autocomplete="off"></label>
+            </div>
+
+            <p class="updated">Please do not include personal information.</p>
+            <button id="send" class="btn" type="submit">Send</button>
+            <p id="request-message" class="message" role="status" aria-live="polite"></p>
+        </form>
+    </main>
+
+    <footer class="site-footer">
+        <nav aria-label="Legal">
+            <a href="privacy.html">Privacy Policy</a>
+            <a href="terms.html">Terms</a>
+            <a href="dmca.html">DMCA</a>
+            <a href="request.html">Request a Movie</a>
+            <a href="contact.html">Contact</a>
+        </nav>
+        <p>&copy; 2026 New Hit Movies. All movie titles and images belong to their owners.</p>
+    </footer>
+<script>
+        (function () {
+            var b = document.getElementById("menu-toggle"), n = document.getElementById("main-nav");
+            b.addEventListener("click", function () {
+                var open = n.classList.toggle("open");
+                b.setAttribute("aria-expanded", String(open));
+            });
+        })();
+    </script>
+<script type="module" src="request.js"></script>
+</body>
+</html>

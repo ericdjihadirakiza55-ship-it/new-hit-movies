@@ -12,8 +12,10 @@ const els = {
     homeView: $("home-view"),
     detailsView: $("details-view"),
     featured: $("featured"),
+    rows: $("rows"),
     search: $("search"),
     genre: $("genre"),
+    type: $("type"),
     sort: $("sort"),
     count: $("movie-count"),
     status: $("movie-status"),
@@ -41,6 +43,7 @@ const state = {
     shown: PAGE_SIZE,
     query: "",
     genre: "all",
+    type: "all",
     sort: "newest"
 };
 
@@ -96,6 +99,24 @@ function getYouTubeId(value) {
     return id && /^[\w-]{6,20}$/.test(id) ? id : null;
 }
 
+function isSeries(movie) {
+    return movie.type === "series";
+}
+
+function kindWord(movie) {
+    return isSeries(movie) ? "Series" : "Movie";
+}
+
+function getSeasons(movie) {
+    return Array.isArray(movie.seasons)
+        ? [...movie.seasons].sort((a, b) => (a.number || 0) - (b.number || 0))
+        : [];
+}
+
+function seasonText(count) {
+    return count + (count === 1 ? " season" : " seasons");
+}
+
 function genreLabel(value) {
     const key = (value || "").toLowerCase();
     if (GENRE_LABELS[key]) return GENRE_LABELS[key];
@@ -108,6 +129,7 @@ function movieMeta(movie) {
     const g = genreLabel(movie.genre);
     if (g) parts.push(g);
     if (movie.rating) parts.push("★ " + movie.rating);
+    if (isSeries(movie)) parts.push(seasonText(getSeasons(movie).length));
     return parts.join(" · ");
 }
 
@@ -175,7 +197,7 @@ function createCard(movie) {
                 href: watchUrl,
                 target: "_blank",
                 rel: "noopener noreferrer",
-                text: "Watch Movie"
+                text: "Watch " + kindWord(movie)
             })
         );
     }
@@ -188,7 +210,7 @@ function createCard(movie) {
                 href: downloadUrl,
                 target: "_blank",
                 rel: "noopener noreferrer",
-                text: "Download Movie"
+                text: "Download " + kindWord(movie)
             })
         );
     }
@@ -202,7 +224,13 @@ function createCard(movie) {
         })
     );
 
-    return el("article", { class: "movie" }, link, buttons);
+    return el(
+        "article",
+        { class: "movie" },
+        isSeries(movie) ? el("span", { class: "badge", text: "Series" }) : null,
+        link,
+        buttons
+    );
 }
 
 function showSkeletons(count = 8) {
@@ -237,7 +265,8 @@ function getFilteredMovies() {
 
             return (
                 title.includes(query) &&
-                (state.genre === "all" || genre === state.genre)
+                (state.genre === "all" || genre === state.genre) &&
+                (state.type === "all" || (state.type === "series") === isSeries(movie))
             );
         })
         .sort(SORTERS[state.sort]);
@@ -250,8 +279,15 @@ function renderList() {
     els.list.replaceChildren(...page.map(createCard));
     els.noResults.hidden = filtered.length > 0;
     els.loadMore.hidden = filtered.length <= state.shown;
-    els.count.textContent =
-        filtered.length + (filtered.length === 1 ? " movie" : " movies");
+    const n = filtered.length;
+    const noun =
+        state.type === "series"
+            ? "series"
+            : state.type === "movie"
+              ? n === 1 ? "movie" : "movies"
+              : n === 1 ? "title" : "titles";
+    els.count.textContent = n + " " + noun;
+    updateRowsVisibility();
 }
 
 function fillGenreOptions() {
@@ -267,6 +303,52 @@ function fillGenreOptions() {
         el("option", { value: "all", text: "All genres" }),
         ...genres.map(g => el("option", { value: g, text: genreLabel(g) }))
     );
+}
+
+
+/* ---------- Home rows (Newest, Top rated, Series) ---------- */
+
+const ROW_SIZE = 10;
+
+function createRow(title, movies, id) {
+    return el(
+        "section",
+        { class: "home-row", "aria-labelledby": id },
+        el("h2", { id, text: title }),
+        el("div", { class: "related-row" }, ...movies.map(createCard))
+    );
+}
+
+function renderRows() {
+    const rows = [];
+
+    const newest = [...state.movies].sort(SORTERS.newest).slice(0, ROW_SIZE);
+    if (newest.length) rows.push(createRow("Newest", newest, "row-newest"));
+
+    const top = state.movies
+        .filter(m => Number(m.rating) > 0)
+        .sort(SORTERS.rating)
+        .slice(0, ROW_SIZE);
+    if (top.length) rows.push(createRow("Top rated", top, "row-top"));
+
+    const series = state.movies
+        .filter(isSeries)
+        .sort(SORTERS.newest)
+        .slice(0, ROW_SIZE);
+    if (series.length) rows.push(createRow("Series", series, "row-series"));
+
+    els.rows.replaceChildren(...rows);
+    updateRowsVisibility();
+}
+
+// Rows only show on the plain home page, not while searching or filtering.
+function updateRowsVisibility() {
+    const plain =
+        !state.query &&
+        state.genre === "all" &&
+        state.type === "all" &&
+        state.sort === "newest";
+    els.rows.hidden = !plain;
 }
 
 function renderFeatured() {
@@ -333,9 +415,105 @@ function createRelated(movie) {
     return el(
         "section",
         { class: "related", "aria-labelledby": "related-title" },
-        el("h2", { id: "related-title", text: "More " + genreLabel(key) + " movies" }),
+        el("h2", { id: "related-title", text: "More " + genreLabel(key) + " titles" }),
         el("div", { class: "related-row" }, ...related.map(createCard))
     );
+}
+
+function seasonLabel(season) {
+    return season.number === 0 ? "Specials" : "Season " + season.number;
+}
+
+function createEpisodeList(season) {
+    const episodes = [...(season.episodeList || [])].sort(
+        (a, b) => (b.number || 0) - (a.number || 0)
+    );
+
+    if (!episodes.length) {
+        return el("p", { class: "status", text: "No episodes added yet." });
+    }
+
+    const items = episodes.map(ep => {
+        const buttons = el("div", { class: "episode-buttons" });
+
+        const watch = safeUrl(ep.watchUrl);
+        if (watch) {
+            buttons.appendChild(
+                el("a", {
+                    class: "btn",
+                    href: watch,
+                    target: "_blank",
+                    rel: "noopener noreferrer",
+                    text: "Watch"
+                })
+            );
+        }
+
+        const download = safeUrl(ep.downloadUrl);
+        if (download) {
+            buttons.appendChild(
+                el("a", {
+                    class: "btn btn-secondary",
+                    href: download,
+                    target: "_blank",
+                    rel: "noopener noreferrer",
+                    text: "Download"
+                })
+            );
+        }
+
+        return el(
+            "li",
+            { class: "episode" },
+            el(
+                "div",
+                { class: "episode-head" },
+                el("span", { class: "episode-badge", text: (season.number === 0 ? "Special" : "S" + season.number) + " E" + ep.number }),
+                el("h3", { text: ep.title || "Episode " + ep.number })
+            ),
+            buttons.children.length ? buttons : null
+        );
+    });
+
+    return el("ul", { class: "episode-list" }, ...items);
+}
+
+function createSeasons(movie) {
+    const seasons = getSeasons(movie);
+    if (!isSeries(movie) || !seasons.length) return null;
+
+    const panel = el("div", { class: "episode-panel", "aria-live": "polite" });
+    const tabs = el("div", { class: "season-tabs", role: "group", "aria-label": "Seasons" });
+    const buttons = [];
+
+    const show = (season, button) => {
+        buttons.forEach(b => b.setAttribute("aria-pressed", String(b === button)));
+        const count = (season.episodeList || []).length;
+        panel.replaceChildren(
+            el("h3", {
+                class: "episodes-title",
+                text: seasonLabel(season) + " · " + count + (count === 1 ? " episode" : " episodes")
+            }),
+            createEpisodeList(season)
+        );
+    };
+
+    seasons.forEach(season => {
+        const button = el("button", {
+            class: "btn btn-outline season-tab",
+            type: "button",
+            "aria-pressed": "false",
+            text: seasonLabel(season)
+        });
+        button.addEventListener("click", () => show(season, button));
+        buttons.push(button);
+        tabs.appendChild(button);
+    });
+
+    // Open the newest season by default.
+    show(seasons[seasons.length - 1], buttons[buttons.length - 1]);
+
+    return el("section", { class: "seasons" }, el("h2", { text: "Seasons" }), tabs, panel);
 }
 
 function showMovieDetails(movie) {
@@ -343,8 +521,8 @@ function showMovieDetails(movie) {
 
     // Facts list (only shows fields that exist).
     const facts = [];
-    if (movie.runtime) facts.push(["Runtime", movie.runtime + " min"]);
-    if (movie.director) facts.push(["Director", movie.director]);
+    if (movie.runtime) facts.push([isSeries(movie) ? "Episode length" : "Runtime", movie.runtime + " min"]);
+    if (movie.director) facts.push([isSeries(movie) ? "Creator" : "Director", movie.director]);
 
     const cast = Array.isArray(movie.cast) ? movie.cast.join(", ") : movie.cast;
     if (cast) facts.push(["Cast", cast]);
@@ -372,7 +550,7 @@ function showMovieDetails(movie) {
                 href: watchUrl,
                 target: "_blank",
                 rel: "noopener noreferrer",
-                text: "Watch Movie"
+                text: "Watch " + kindWord(movie)
             })
         );
     }
@@ -385,10 +563,18 @@ function showMovieDetails(movie) {
                 href: downloadUrl,
                 target: "_blank",
                 rel: "noopener noreferrer",
-                text: "Download Movie"
+                text: "Download " + kindWord(movie)
             })
         );
     }
+
+    actions.appendChild(
+        el("a", {
+            class: "btn btn-outline",
+            href: "request.html?type=report&title=" + encodeURIComponent(title),
+            text: "Report a problem"
+        })
+    );
 
     // Trailer.
     const videoId = getYouTubeId(movie.trailerUrl);
@@ -410,7 +596,7 @@ function showMovieDetails(movie) {
 
     // replaceChildren turns null into the text "null", so drop empty sections.
     const sections = [
-        el("a", { class: "back-link", href: "#", text: "← All movies" }),
+        el("a", { class: "back-link", href: "#", text: "← All titles" }),
         el(
             "div",
             { class: "details-content" },
@@ -428,6 +614,7 @@ function showMovieDetails(movie) {
                 actions
             )
         ),
+        createSeasons(movie),
         trailer,
         createRelated(movie)
     ].filter(Boolean);
@@ -443,16 +630,16 @@ function showNotFound() {
         el(
             "div",
             { class: "not-found" },
-            el("h1", { text: "Movie not found" }),
+            el("h1", { text: "Title not found" }),
             el("p", {
                 class: "status",
-                text: "This movie may have been removed or the link is wrong."
+                text: "This title may have been removed or the link is wrong."
             }),
             el("a", { class: "btn", href: "#", text: "Browse all movies" })
         )
     );
 
-    setPageInfo("Movie not found");
+    setPageInfo("Title not found");
     setView("details");
 }
 
@@ -493,22 +680,26 @@ function route() {
     }
 
     setPageInfo("");
-if (location.hash === "#about") {
+
+    if (["#all", "#movies", "#series"].includes(location.hash)) {
+        const type = { "#all": "all", "#movies": "movie", "#series": "series" }[location.hash];
+        state.type = type;
+        els.type.value = type;
+        state.shown = PAGE_SIZE;
+        if (state.loaded) renderList();
+        setView("home");
+        if (type === "all") window.scrollTo(0, 0);
+        else $("browse").scrollIntoView();
+        return;
+    }
+
+    if (location.hash === "#about") {
+        setView("home");
+        $("about").scrollIntoView();
+        return;
+    }
+
     setView("home");
-    requestAnimationFrame(() => {
-        $("about").scrollIntoView({ behavior: "smooth" });
-    });
-    return;
-}
-
-setView("home");
-
-if (location.hash === "#top" || location.hash === "") {
-    requestAnimationFrame(() => {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-    });
-}
-  
 }
 
 window.addEventListener("hashchange", route);
@@ -536,6 +727,27 @@ els.search.addEventListener("input", () => {
 
 els.genre.addEventListener("change", () => {
     state.genre = els.genre.value;
+    state.shown = PAGE_SIZE;
+    renderList();
+});
+
+const menuButton = $("menu-toggle");
+const mainNav = $("main-nav");
+
+menuButton.addEventListener("click", () => {
+    const open = mainNav.classList.toggle("open");
+    menuButton.setAttribute("aria-expanded", String(open));
+});
+
+mainNav.addEventListener("click", event => {
+    if (event.target.closest("a")) {
+        mainNav.classList.remove("open");
+        menuButton.setAttribute("aria-expanded", "false");
+    }
+});
+
+els.type.addEventListener("change", () => {
+    state.type = els.type.value;
     state.shown = PAGE_SIZE;
     renderList();
 });
@@ -609,6 +821,7 @@ async function loadMovies() {
         els.status.hidden = true;
         fillGenreOptions();
         renderFeatured();
+        renderRows();
         renderList();
         route();
     } catch (error) {
