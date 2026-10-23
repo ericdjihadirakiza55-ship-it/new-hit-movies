@@ -31,8 +31,10 @@ const seasonsList = $("seasons-list");
 
 const TEXT_FIELDS = [
     "title", "genre", "releaseDate", "director", "cast",
-    "description", "posterUrl", "watchUrl", "downloadUrl", "trailerUrl"
+    "description", "posterUrl", "watchUrl", "downloadUrl", "trailerUrl",
+    "interpreter"
 ];
+const BOOL_FIELDS = ["interpreted", "subtitled", "featured"];
 const NUMBER_FIELDS = ["year", "rating", "runtime"];
 const URL_FIELDS = ["posterUrl", "watchUrl", "downloadUrl", "trailerUrl"];
 
@@ -44,6 +46,7 @@ let editingId = null;
 function clearSiteCache() {
     try {
         localStorage.removeItem("nhm-movies-v1");
+        localStorage.removeItem("nhm-movies-v2");
     } catch {
         // Ignore: storage may be blocked.
     }
@@ -181,6 +184,13 @@ function readForm() {
         if (raw !== "") data[name] = Number(raw);
     }
 
+    // Always saved, so unticking a box really turns it off.
+    for (const name of BOOL_FIELDS) {
+        data[name] = $("f-" + name).checked;
+    }
+
+    if (!data.interpreted) delete data.interpreter;
+
     return data;
 }
 
@@ -201,6 +211,10 @@ function fillForm(movie) {
         $("f-" + name).value = Array.isArray(value)
             ? value.join(", ")
             : value ?? "";
+    }
+
+    for (const name of BOOL_FIELDS) {
+        $("f-" + name).checked = movie[name] === true;
     }
 }
 
@@ -258,7 +272,7 @@ async function loadMovies() {
     try {
         const snapshot = await getDocs(collection(db, "movies"));
         movies = snapshot.docs
-            .map(d => ({ id: d.id, ...d.data() }))
+            .map(d => ({ ...d.data(), id: d.id }))
             .sort((a, b) => (a.title || "").localeCompare(b.title || ""));
         clearSiteCache();
         renderList();
@@ -287,7 +301,10 @@ function renderList() {
         sub.textContent = [
             movie.type === "series" ? "Series, " + count + (count === 1 ? " season" : " seasons") : "",
             movie.year,
-            movie.genre
+            movie.genre,
+            movie.interpreted ? "Interpreted" : "",
+            movie.subtitled ? "Subtitles" : "",
+            movie.featured ? "In slider" : ""
         ].filter(Boolean).join(", ");
         info.append(title, sub);
 

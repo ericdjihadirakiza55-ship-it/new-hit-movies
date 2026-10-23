@@ -16,6 +16,7 @@ const els = {
     search: $("search"),
     genre: $("genre"),
     type: $("type"),
+    version: $("version"),
     sort: $("sort"),
     count: $("movie-count"),
     status: $("movie-status"),
@@ -44,6 +45,7 @@ const state = {
     query: "",
     genre: "all",
     type: "all",
+    version: "all",
     sort: "newest"
 };
 
@@ -131,6 +133,15 @@ function movieMeta(movie) {
     if (movie.rating) parts.push("★ " + movie.rating);
     if (isSeries(movie)) parts.push(seasonText(getSeasons(movie).length));
     return parts.join(" · ");
+}
+
+// Small labels shown on cards and slides.
+function getBadges(movie) {
+    const list = [];
+    if (isSeries(movie)) list.push(["Series", "badge-series"]);
+    if (movie.interpreted === true) list.push(["Interpreted", "badge-interpreted"]);
+    if (movie.subtitled === true) list.push(["Subtitles", "badge-subtitled"]);
+    return list.map(([text, cls]) => el("span", { class: "badge " + cls, text }));
 }
 
 function setPageInfo(title, description) {
@@ -224,10 +235,12 @@ function createCard(movie) {
         })
     );
 
+    const badges = getBadges(movie);
+
     return el(
         "article",
         { class: "movie" },
-        isSeries(movie) ? el("span", { class: "badge", text: "Series" }) : null,
+        badges.length ? el("div", { class: "badges" }, ...badges) : null,
         link,
         buttons
     );
@@ -266,6 +279,10 @@ function getFilteredMovies() {
             return (
                 title.includes(query) &&
                 (state.genre === "all" || genre === state.genre) &&
+                (state.version === "all" ||
+                    (state.version === "interpreted"
+                        ? movie.interpreted === true
+                        : movie.subtitled === true)) &&
                 (state.type === "all" || (state.type === "series") === isSeries(movie))
             );
         })
@@ -325,6 +342,18 @@ function renderRows() {
     const newest = [...state.movies].sort(SORTERS.newest).slice(0, ROW_SIZE);
     if (newest.length) rows.push(createRow("Newest", newest, "row-newest"));
 
+    const interpreted = state.movies
+        .filter(m => m.interpreted === true)
+        .sort(SORTERS.newest)
+        .slice(0, ROW_SIZE);
+    if (interpreted.length) rows.push(createRow("Interpreted movies", interpreted, "row-interpreted"));
+
+    const subtitled = state.movies
+        .filter(m => m.subtitled === true)
+        .sort(SORTERS.newest)
+        .slice(0, ROW_SIZE);
+    if (subtitled.length) rows.push(createRow("Movies with subtitles", subtitled, "row-subtitled"));
+
     const top = state.movies
         .filter(m => Number(m.rating) > 0)
         .sort(SORTERS.rating)
@@ -347,55 +376,211 @@ function updateRowsVisibility() {
         !state.query &&
         state.genre === "all" &&
         state.type === "all" &&
+        state.version === "all" &&
         state.sort === "newest";
     els.rows.hidden = !plain;
 }
 
-function renderFeatured() {
+/* ---------- Featured slider (animated ad banner) ---------- */
+
+const SLIDE_COUNT = 5;
+
+// Titles ticked "Show in the top slider" come first, then the newest ones.
+function pickFeatured() {
     const sorted = [...state.movies].sort(SORTERS.newest);
-    const movie = sorted.find(m => safeUrl(m.posterUrl)) || sorted[0];
+    const chosen = sorted.filter(m => m.featured === true).slice(0, SLIDE_COUNT);
 
-    if (!movie) {
-        els.featured.hidden = true;
-        return;
+    for (const movie of sorted) {
+        if (chosen.length >= SLIDE_COUNT) break;
+        if (!chosen.includes(movie) && safeUrl(movie.posterUrl)) chosen.push(movie);
     }
+    return chosen;
+}
 
-    const posterUrl = safeUrl(movie.posterUrl);
-    if (posterUrl) {
-        els.featured.style.setProperty("--backdrop", 'url("' + posterUrl + '")');
-    }
-
+function createSlide(movie, index, total) {
     const description = movie.description || "";
     const shortText =
-        description.length > 220 ? description.slice(0, 217) + "..." : description;
+        description.length > 200 ? description.slice(0, 197) + "..." : description;
 
-    const actions = el(
-        "div",
-        { class: "details-actions" },
+    const actions = el("div", { class: "details-actions" });
+    const watchUrl = safeUrl(movie.watchUrl);
+
+    if (watchUrl) {
+        actions.appendChild(
+            el("a", {
+                class: "btn",
+                href: watchUrl,
+                target: "_blank",
+                rel: "noopener noreferrer",
+                text: "Watch " + kindWord(movie)
+            })
+        );
+    }
+
+    actions.appendChild(
         el("a", {
-            class: "btn",
+            class: watchUrl ? "btn btn-outline" : "btn",
             href: "#movie=" + encodeURIComponent(movie.id),
             text: "View details"
         })
     );
 
-    els.featured.replaceChildren(
+    const background = el("div", { class: "slide-bg", "aria-hidden": "true" });
+    const posterUrl = safeUrl(movie.posterUrl);
+    if (posterUrl) background.style.backgroundImage = 'url("' + posterUrl + '")';
+
+    const poster = createPoster(movie);
+    const posterImg = poster.querySelector("img");
+    if (posterImg && index === 0) posterImg.loading = "eager";
+
+    const badges = getBadges(movie);
+
+    return el(
+        "article",
+        {
+            class: "slide",
+            role: "group",
+            "aria-roledescription": "slide",
+            "aria-label": index + 1 + " of " + total
+        },
+        background,
         el(
             "div",
             { class: "featured-inner" },
-            createPoster(movie),
+            poster,
             el(
                 "div",
                 { class: "featured-text" },
-                el("p", { class: "featured-label", text: "Featured" }),
+                el("p", { class: "featured-label", text: "Now showing" }),
+                badges.length ? el("div", { class: "slide-tags" }, ...badges) : null,
                 el("h2", { text: movie.title || "Untitled movie" }),
                 el("p", { class: "meta", text: movieMeta(movie) }),
-                el("p", { text: shortText }),
+                shortText ? el("p", { class: "slide-desc", text: shortText }) : null,
                 actions
             )
         )
     );
+}
 
+function renderFeatured() {
+    const picks = pickFeatured();
+
+    if (!picks.length) {
+        els.featured.hidden = true;
+        return;
+    }
+
+    const total = picks.length;
+    const slides = picks.map((movie, i) => createSlide(movie, i, total));
+    const track = el("div", { class: "slides" }, ...slides);
+    const slider = el(
+        "div",
+        {
+            class: "slider",
+            role: "region",
+            "aria-roledescription": "carousel",
+            "aria-label": "Featured titles"
+        },
+        track
+    );
+
+    let current = 0;
+    const hold = { user: false, hover: false, focus: false };
+    const dots = [];
+
+    function paint() {
+        slides.forEach((slide, i) => slide.classList.toggle("is-active", i === current));
+        dots.forEach((dot, i) => {
+            dot.classList.toggle("is-active", i === current);
+            if (i === current) dot.setAttribute("aria-current", "true");
+            else dot.removeAttribute("aria-current");
+        });
+    }
+
+    function go(index) {
+        current = (index + total) % total;
+        paint();
+    }
+
+    // Only one title: no controls, no movement.
+    if (total > 1) {
+        const prev = el("button", { class: "slider-btn", type: "button", "aria-label": "Previous slide", text: "‹" });
+        const next = el("button", { class: "slider-btn", type: "button", "aria-label": "Next slide", text: "›" });
+        const pause = el("button", { class: "slider-btn slider-pause", type: "button", "aria-label": "Pause slideshow", text: "❚❚" });
+        const dotBox = el("div", { class: "dots" });
+
+        picks.forEach((movie, i) => {
+            const dot = el(
+                "button",
+                {
+                    class: "dot",
+                    type: "button",
+                    "aria-label": "Show slide " + (i + 1) + ": " + (movie.title || "Untitled movie")
+                },
+                el("i")
+            );
+            dot.addEventListener("click", () => go(i));
+            dots.push(dot);
+            dotBox.appendChild(dot);
+        });
+
+        const bar = el("div", { class: "slider-bar" }, prev, dotBox, pause, next);
+        slider.appendChild(bar);
+
+        const syncPause = () => {
+            slider.classList.toggle("is-paused", hold.user || hold.hover || hold.focus);
+        };
+
+        prev.addEventListener("click", () => go(current - 1));
+        next.addEventListener("click", () => go(current + 1));
+
+        pause.addEventListener("click", () => {
+            hold.user = !hold.user;
+            pause.textContent = hold.user ? "▶" : "❚❚";
+            pause.setAttribute("aria-label", hold.user ? "Play slideshow" : "Pause slideshow");
+            syncPause();
+        });
+
+        // The filling bar on the active dot is the timer: when it ends, go to the next slide.
+        bar.addEventListener("animationend", event => {
+            if (event.animationName === "dotfill") go(current + 1);
+        });
+
+        // Pause while a mouse is over the banner, or while keyboard focus is inside it.
+        if (window.matchMedia("(hover: hover)").matches) {
+            slider.addEventListener("mouseenter", () => { hold.hover = true; syncPause(); });
+            slider.addEventListener("mouseleave", () => { hold.hover = false; syncPause(); });
+        }
+        slider.addEventListener("focusin", event => {
+            if (event.target.matches(":focus-visible")) { hold.focus = true; syncPause(); }
+        });
+        slider.addEventListener("focusout", () => { hold.focus = false; syncPause(); });
+
+        slider.addEventListener("keydown", event => {
+            if (event.key === "ArrowLeft") go(current - 1);
+            if (event.key === "ArrowRight") go(current + 1);
+        });
+
+        // Swipe on phones.
+        let startX = null;
+        let startY = 0;
+        track.addEventListener("touchstart", event => {
+            startX = event.touches[0].clientX;
+            startY = event.touches[0].clientY;
+        }, { passive: true });
+        track.addEventListener("touchend", event => {
+            if (startX === null) return;
+            const dx = event.changedTouches[0].clientX - startX;
+            const dy = event.changedTouches[0].clientY - startY;
+            startX = null;
+            if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+                go(current + (dx < 0 ? 1 : -1));
+            }
+        }, { passive: true });
+    }
+
+    paint();
+    els.featured.replaceChildren(slider);
     els.featured.hidden = false;
 }
 
@@ -468,7 +653,7 @@ function createEpisodeList(season) {
             el(
                 "div",
                 { class: "episode-head" },
-                el("span", { class: "episode-badge", text: (season.number === 0 ? "Special" : "S" + season.number) + " E" + ep.number }),
+                el("span", { class: "episode-badge", text: "S" + season.number + " E" + ep.number }),
                 el("h3", { text: ep.title || "Episode " + ep.number })
             ),
             buttons.children.length ? buttons : null
@@ -510,8 +695,8 @@ function createSeasons(movie) {
         tabs.appendChild(button);
     });
 
-    // Open the newest season by default.
-    show(seasons[seasons.length - 1], buttons[buttons.length - 1]);
+    // Open the first season by default so episodes are visible straight away.
+    show(seasons[0], buttons[0]);
 
     return el("section", { class: "seasons" }, el("h2", { text: "Seasons" }), tabs, panel);
 }
@@ -527,6 +712,10 @@ function showMovieDetails(movie) {
     const cast = Array.isArray(movie.cast) ? movie.cast.join(", ") : movie.cast;
     if (cast) facts.push(["Cast", cast]);
     if (movie.releaseDate) facts.push(["Released", movie.releaseDate]);
+    if (movie.interpreted === true) {
+        facts.push(["Interpreted", movie.interpreter ? "By " + movie.interpreter : "Yes"]);
+    }
+    if (movie.subtitled === true) facts.push(["Subtitles", "Available"]);
 
     const factsList = facts.length
         ? el(
@@ -567,14 +756,6 @@ function showMovieDetails(movie) {
             })
         );
     }
-
-    actions.appendChild(
-        el("a", {
-            class: "btn btn-outline",
-            href: "request.html?type=report&title=" + encodeURIComponent(title),
-            text: "Report a problem"
-        })
-    );
 
     // Trailer.
     const videoId = getYouTubeId(movie.trailerUrl);
@@ -651,13 +832,21 @@ function setView(view) {
     els.detailsView.hidden = !isDetails;
 
     if (isDetails) {
-        window.scrollTo(0, 0);
+        window.scrollTo({ top: 0, behavior: "instant" });
     } else {
         // Remove the details page so a playing trailer stops.
         els.detailsView.replaceChildren();
-        window.scrollTo(0, savedScroll);
+        window.scrollTo({ top: savedScroll, behavior: "instant" });
     }
 }
+
+const HOME_ROUTES = {
+    "#all": { type: "all", version: "all" },
+    "#movies": { type: "movie", version: "all" },
+    "#series": { type: "series", version: "all" },
+    "#interpreted": { type: "all", version: "interpreted" },
+    "#subtitles": { type: "all", version: "subtitled" }
+};
 
 function route() {
     const match = location.hash.match(/^#movie=(.+)$/);
@@ -681,14 +870,16 @@ function route() {
 
     setPageInfo("");
 
-    if (["#all", "#movies", "#series"].includes(location.hash)) {
-        const type = { "#all": "all", "#movies": "movie", "#series": "series" }[location.hash];
-        state.type = type;
-        els.type.value = type;
+    const target = HOME_ROUTES[location.hash];
+    if (target) {
+        state.type = target.type;
+        state.version = target.version;
+        els.type.value = target.type;
+        els.version.value = target.version;
         state.shown = PAGE_SIZE;
         if (state.loaded) renderList();
         setView("home");
-        if (type === "all") window.scrollTo(0, 0);
+        if (location.hash === "#all") window.scrollTo(0, 0);
         else $("browse").scrollIntoView();
         return;
     }
@@ -752,6 +943,12 @@ els.type.addEventListener("change", () => {
     renderList();
 });
 
+els.version.addEventListener("change", () => {
+    state.version = els.version.value;
+    state.shown = PAGE_SIZE;
+    renderList();
+});
+
 els.sort.addEventListener("change", () => {
     state.sort = els.sort.value;
     state.shown = PAGE_SIZE;
@@ -766,7 +963,7 @@ els.loadMore.addEventListener("click", () => {
 /* ---------- Load data ---------- */
 
 // Cache the movie list in the browser so repeat visits don't re-read Firestore.
-const CACHE_KEY = "nhm-movies-v1";
+const CACHE_KEY = "nhm-movies-v2";
 const CACHE_MINUTES = 5;
 
 function readCache() {
@@ -804,7 +1001,7 @@ async function loadMovies() {
             const snapshot = await getDocs(collection(db, "movies"));
 
             // Keep the document ID so every movie has its own link.
-            movies = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            movies = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
             writeCache(movies);
         }
 

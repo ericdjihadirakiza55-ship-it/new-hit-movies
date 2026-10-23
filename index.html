@@ -36,6 +36,8 @@
             <a href="#all">Home</a>
             <a href="#movies">Movies</a>
             <a href="#series">Series</a>
+            <a href="#interpreted">Interpreted</a>
+            <a href="#subtitles">Subtitles</a>
             <a href="#about">About</a>
             <a href="request.html">Request</a>
         </nav>
@@ -47,7 +49,7 @@
         </noscript>
         <!-- HOME VIEW -->
         <div id="home-view">
-            <section id="featured" class="featured" aria-label="Featured movie" hidden></section>
+            <section id="featured" class="featured" aria-label="Featured titles" hidden></section>
 
             <div id="rows" class="rows"></div>
 
@@ -61,6 +63,13 @@
                         <option value="all">Movies and series</option>
                         <option value="movie">Movies only</option>
                         <option value="series">Series only</option>
+                    </select>
+
+                    <label class="sr-only" for="version">Filter by version</label>
+                    <select id="version">
+                        <option value="all">All versions</option>
+                        <option value="interpreted">Interpreted</option>
+                        <option value="subtitled">With subtitles</option>
                     </select>
 
                     <label class="sr-only" for="genre">Filter by genre</label>
