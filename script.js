@@ -185,6 +185,12 @@ function createPoster(movie) {
     return poster;
 }
 
+// "🎙 VJ Name" line, shown on cards and slides of interpreted titles.
+function interpreterLine(movie) {
+    if (movie.interpreted !== true || !movie.interpreter) return null;
+    return el("p", { class: "interpreter", text: "🎙 " + movie.interpreter });
+}
+
 function createCard(movie) {
     const link = el(
         "a",
@@ -195,7 +201,8 @@ function createCard(movie) {
         },
         createPoster(movie),
         el("h3", { text: movie.title || "Untitled movie" }),
-        el("p", { class: "meta", text: movieMeta(movie) })
+        el("p", { class: "meta", text: movieMeta(movie) }),
+        interpreterLine(movie)
     );
 
     const buttons = el("div", { class: "movie-buttons" });
@@ -455,6 +462,7 @@ function createSlide(movie, index, total) {
                 badges.length ? el("div", { class: "slide-tags" }, ...badges) : null,
                 el("h2", { text: movie.title || "Untitled movie" }),
                 el("p", { class: "meta", text: movieMeta(movie) }),
+                interpreterLine(movie),
                 shortText ? el("p", { class: "slide-desc", text: shortText }) : null,
                 actions
             )

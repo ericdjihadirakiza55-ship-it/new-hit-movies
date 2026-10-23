@@ -333,12 +333,15 @@ input, select {
     border-radius: var(--radius);
     overflow: hidden;
     transition: transform 0.15s ease;
+    display: flex;
+    flex-direction: column;
 }
 
 .movie:hover { transform: translateY(-3px); }
 
 .movie-link {
     display: block;
+    flex: 1;
     text-decoration: none;
     padding-bottom: 14px;
 }
@@ -347,6 +350,17 @@ input, select {
     margin: 12px 10px 4px;
     font-size: 16px;
 }
+
+.movie .interpreter {
+    margin: 4px 10px 0;
+    color: #fbbf24;
+    font-size: 13px;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.featured-text .interpreter { color: #fbbf24; font-weight: 700; }
 
 .movie .meta {
     margin: 0 10px;
