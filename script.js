@@ -25,8 +25,17 @@ const els = {
     loadMore: $("load-more")
 };
 
+// Text comes from i18n.js (English / Kinyarwanda). Falls back to English if it is missing.
+const t = (key, vars) =>
+    window.I18N
+        ? window.I18N.t(key, vars)
+        : String(key)
+              .replace(/\|\w+$/, "")
+              .replace(/\{(\w+)\}/g, (m, k) => (vars && vars[k] !== undefined ? vars[k] : m));
+const untitled = () => t("Untitled movie");
+
 const SITE_NAME = "New Hit Movies";
-const DEFAULT_DESCRIPTION =
+const DEFAULT_DESCRIPTION_EN =
     "Browse new and popular movies, watch trailers and find where to watch.";
 const PAGE_SIZE = 12;
 
@@ -105,8 +114,12 @@ function isSeries(movie) {
     return movie.type === "series";
 }
 
-function kindWord(movie) {
-    return isSeries(movie) ? "Series" : "Movie";
+function watchLabel(movie) {
+    return t(isSeries(movie) ? "Watch Series" : "Watch Movie");
+}
+
+function downloadLabel(movie) {
+    return t(isSeries(movie) ? "Download Series" : "Download Movie");
 }
 
 function getSeasons(movie) {
@@ -116,7 +129,7 @@ function getSeasons(movie) {
 }
 
 function seasonText(count) {
-    return count + (count === 1 ? " season" : " seasons");
+    return t(count === 1 ? "{n} season" : "{n} seasons", { n: count });
 }
 
 function genreLabel(value) {
@@ -138,23 +151,25 @@ function movieMeta(movie) {
 // Small labels shown on cards and slides.
 function getBadges(movie) {
     const list = [];
-    if (isSeries(movie)) list.push(["Series", "badge-series"]);
-    if (movie.interpreted === true) list.push(["Interpreted", "badge-interpreted"]);
-    if (movie.subtitled === true) list.push(["Subtitles", "badge-subtitled"]);
+    if (isSeries(movie)) list.push([t("Series"), "badge-series"]);
+    if (movie.interpreted === true) list.push([t("Interpreted|one"), "badge-interpreted"]);
+    if (movie.subtitled === true) list.push([t("Subtitles"), "badge-subtitled"]);
     return list.map(([text, cls]) => el("span", { class: "badge " + cls, text }));
 }
+
+const defaultDescription = () => t(DEFAULT_DESCRIPTION_EN);
 
 function setPageInfo(title, description) {
     document.title = title ? title + " | " + SITE_NAME : SITE_NAME;
 
     const desc = document.querySelector('meta[name="description"]');
-    if (desc) desc.setAttribute("content", description || DEFAULT_DESCRIPTION);
+    if (desc) desc.setAttribute("content", description || defaultDescription());
 
     const ogTitle = document.querySelector('meta[property="og:title"]');
     if (ogTitle) ogTitle.setAttribute("content", title || SITE_NAME);
 
     const ogDesc = document.querySelector('meta[property="og:description"]');
-    if (ogDesc) ogDesc.setAttribute("content", description || DEFAULT_DESCRIPTION);
+    if (ogDesc) ogDesc.setAttribute("content", description || defaultDescription());
 }
 
 /* ---------- Building blocks ---------- */
@@ -170,7 +185,7 @@ function createPoster(movie) {
 
     const img = el("img", {
         src: posterUrl,
-        alt: (movie.title || "Movie") + " poster",
+        alt: t("{title} poster", { title: movie.title || t("Movie") }),
         width: 300,
         height: 450,
         loading: "lazy"
@@ -197,10 +212,10 @@ function createCard(movie) {
         {
             class: "movie-link",
             href: "#movie=" + encodeURIComponent(movie.id),
-            "aria-label": (movie.title || "Untitled movie") + ", view details"
+            "aria-label": t("{title}, view details", { title: movie.title || untitled() })
         },
         createPoster(movie),
-        el("h3", { text: movie.title || "Untitled movie" }),
+        el("h3", { text: movie.title || untitled() }),
         el("p", { class: "meta", text: movieMeta(movie) }),
         interpreterLine(movie)
     );
@@ -215,7 +230,7 @@ function createCard(movie) {
                 href: watchUrl,
                 target: "_blank",
                 rel: "noopener noreferrer",
-                text: "Watch " + kindWord(movie)
+                text: watchLabel(movie)
             })
         );
     }
@@ -228,7 +243,7 @@ function createCard(movie) {
                 href: downloadUrl,
                 target: "_blank",
                 rel: "noopener noreferrer",
-                text: "Download " + kindWord(movie)
+                text: downloadLabel(movie)
             })
         );
     }
@@ -238,7 +253,7 @@ function createCard(movie) {
         el("a", {
             class: "btn btn-outline",
             href: "#movie=" + encodeURIComponent(movie.id),
-            text: "View Details"
+            text: t("View Details")
         })
     );
 
@@ -304,13 +319,13 @@ function renderList() {
     els.noResults.hidden = filtered.length > 0;
     els.loadMore.hidden = filtered.length <= state.shown;
     const n = filtered.length;
-    const noun =
+    const countKey =
         state.type === "series"
-            ? "series"
+            ? "{n} series"
             : state.type === "movie"
-              ? n === 1 ? "movie" : "movies"
-              : n === 1 ? "title" : "titles";
-    els.count.textContent = n + " " + noun;
+              ? n === 1 ? "{n} movie" : "{n} movies"
+              : n === 1 ? "{n} title" : "{n} titles";
+    els.count.textContent = t(countKey, { n });
     updateRowsVisibility();
 }
 
@@ -324,8 +339,8 @@ function fillGenreOptions() {
     ].sort();
 
     els.genre.replaceChildren(
-        el("option", { value: "all", text: "All genres" }),
-        ...genres.map(g => el("option", { value: g, text: genreLabel(g) }))
+        el("option", { value: "all", text: t("All genres") }),
+        ...genres.map(g => el("option", { value: g, text: t(genreLabel(g)) }))
     );
 }
 
@@ -347,31 +362,31 @@ function renderRows() {
     const rows = [];
 
     const newest = [...state.movies].sort(SORTERS.newest).slice(0, ROW_SIZE);
-    if (newest.length) rows.push(createRow("Newest", newest, "row-newest"));
+    if (newest.length) rows.push(createRow(t("Newest"), newest, "row-newest"));
 
     const interpreted = state.movies
         .filter(m => m.interpreted === true)
         .sort(SORTERS.newest)
         .slice(0, ROW_SIZE);
-    if (interpreted.length) rows.push(createRow("Interpreted movies", interpreted, "row-interpreted"));
+    if (interpreted.length) rows.push(createRow(t("Interpreted movies"), interpreted, "row-interpreted"));
 
     const subtitled = state.movies
         .filter(m => m.subtitled === true)
         .sort(SORTERS.newest)
         .slice(0, ROW_SIZE);
-    if (subtitled.length) rows.push(createRow("Movies with subtitles", subtitled, "row-subtitled"));
+    if (subtitled.length) rows.push(createRow(t("Movies with subtitles"), subtitled, "row-subtitled"));
 
     const top = state.movies
         .filter(m => Number(m.rating) > 0)
         .sort(SORTERS.rating)
         .slice(0, ROW_SIZE);
-    if (top.length) rows.push(createRow("Top rated", top, "row-top"));
+    if (top.length) rows.push(createRow(t("Top rated"), top, "row-top"));
 
     const series = state.movies
         .filter(isSeries)
         .sort(SORTERS.newest)
         .slice(0, ROW_SIZE);
-    if (series.length) rows.push(createRow("Series", series, "row-series"));
+    if (series.length) rows.push(createRow(t("Series"), series, "row-series"));
 
     els.rows.replaceChildren(...rows);
     updateRowsVisibility();
@@ -419,7 +434,7 @@ function createSlide(movie, index, total) {
                 href: watchUrl,
                 target: "_blank",
                 rel: "noopener noreferrer",
-                text: "Watch " + kindWord(movie)
+                text: watchLabel(movie)
             })
         );
     }
@@ -428,7 +443,7 @@ function createSlide(movie, index, total) {
         el("a", {
             class: watchUrl ? "btn btn-outline" : "btn",
             href: "#movie=" + encodeURIComponent(movie.id),
-            text: "View details"
+            text: t("View details")
         })
     );
 
@@ -448,7 +463,7 @@ function createSlide(movie, index, total) {
             class: "slide",
             role: "group",
             "aria-roledescription": "slide",
-            "aria-label": index + 1 + " of " + total
+            "aria-label": t("{i} of {n}", { i: index + 1, n: total })
         },
         background,
         el(
@@ -458,9 +473,9 @@ function createSlide(movie, index, total) {
             el(
                 "div",
                 { class: "featured-text" },
-                el("p", { class: "featured-label", text: "Now showing" }),
+                el("p", { class: "featured-label", text: t("Now showing") }),
                 badges.length ? el("div", { class: "slide-tags" }, ...badges) : null,
-                el("h2", { text: movie.title || "Untitled movie" }),
+                el("h2", { text: movie.title || untitled() }),
                 el("p", { class: "meta", text: movieMeta(movie) }),
                 interpreterLine(movie),
                 shortText ? el("p", { class: "slide-desc", text: shortText }) : null,
@@ -487,7 +502,7 @@ function renderFeatured() {
             class: "slider",
             role: "region",
             "aria-roledescription": "carousel",
-            "aria-label": "Featured titles"
+            "aria-label": t("Featured titles")
         },
         track
     );
@@ -512,9 +527,9 @@ function renderFeatured() {
 
     // Only one title: no controls, no movement.
     if (total > 1) {
-        const prev = el("button", { class: "slider-btn", type: "button", "aria-label": "Previous slide", text: "‹" });
-        const next = el("button", { class: "slider-btn", type: "button", "aria-label": "Next slide", text: "›" });
-        const pause = el("button", { class: "slider-btn slider-pause", type: "button", "aria-label": "Pause slideshow", text: "❚❚" });
+        const prev = el("button", { class: "slider-btn", type: "button", "aria-label": t("Previous slide"), text: "‹" });
+        const next = el("button", { class: "slider-btn", type: "button", "aria-label": t("Next slide"), text: "›" });
+        const pause = el("button", { class: "slider-btn slider-pause", type: "button", "aria-label": t("Pause slideshow"), text: "❚❚" });
         const dotBox = el("div", { class: "dots" });
 
         picks.forEach((movie, i) => {
@@ -523,7 +538,7 @@ function renderFeatured() {
                 {
                     class: "dot",
                     type: "button",
-                    "aria-label": "Show slide " + (i + 1) + ": " + (movie.title || "Untitled movie")
+                    "aria-label": t("Show slide {n}: {title}", { n: i + 1, title: movie.title || untitled() })
                 },
                 el("i")
             );
@@ -545,7 +560,7 @@ function renderFeatured() {
         pause.addEventListener("click", () => {
             hold.user = !hold.user;
             pause.textContent = hold.user ? "▶" : "❚❚";
-            pause.setAttribute("aria-label", hold.user ? "Play slideshow" : "Pause slideshow");
+            pause.setAttribute("aria-label", t(hold.user ? "Play slideshow" : "Pause slideshow"));
             syncPause();
         });
 
@@ -608,13 +623,13 @@ function createRelated(movie) {
     return el(
         "section",
         { class: "related", "aria-labelledby": "related-title" },
-        el("h2", { id: "related-title", text: "More " + genreLabel(key) + " titles" }),
+        el("h2", { id: "related-title", text: t("More {genre} titles", { genre: t(genreLabel(key)) }) }),
         el("div", { class: "related-row" }, ...related.map(createCard))
     );
 }
 
 function seasonLabel(season) {
-    return season.number === 0 ? "Specials" : "Season " + season.number;
+    return season.number === 0 ? t("Specials") : t("Season {n}", { n: season.number });
 }
 
 function createEpisodeList(season) {
@@ -623,7 +638,7 @@ function createEpisodeList(season) {
     );
 
     if (!episodes.length) {
-        return el("p", { class: "status", text: "No episodes added yet." });
+        return el("p", { class: "status", text: t("No episodes added yet.") });
     }
 
     const items = episodes.map(ep => {
@@ -637,7 +652,7 @@ function createEpisodeList(season) {
                     href: watch,
                     target: "_blank",
                     rel: "noopener noreferrer",
-                    text: "Watch"
+                    text: t("Watch")
                 })
             );
         }
@@ -650,7 +665,7 @@ function createEpisodeList(season) {
                     href: download,
                     target: "_blank",
                     rel: "noopener noreferrer",
-                    text: "Download"
+                    text: t("Download")
                 })
             );
         }
@@ -662,7 +677,7 @@ function createEpisodeList(season) {
                 "div",
                 { class: "episode-head" },
                 el("span", { class: "episode-badge", text: "S" + season.number + " E" + ep.number }),
-                el("h3", { text: ep.title || "Episode " + ep.number })
+                el("h3", { text: ep.title || t("Episode {n}", { n: ep.number }) })
             ),
             buttons.children.length ? buttons : null
         );
@@ -676,7 +691,7 @@ function createSeasons(movie) {
     if (!isSeries(movie) || !seasons.length) return null;
 
     const panel = el("div", { class: "episode-panel", "aria-live": "polite" });
-    const tabs = el("div", { class: "season-tabs", role: "group", "aria-label": "Seasons" });
+    const tabs = el("div", { class: "season-tabs", role: "group", "aria-label": t("Seasons") });
     const buttons = [];
 
     const show = (season, button) => {
@@ -685,7 +700,7 @@ function createSeasons(movie) {
         panel.replaceChildren(
             el("h3", {
                 class: "episodes-title",
-                text: seasonLabel(season) + " · " + count + (count === 1 ? " episode" : " episodes")
+                text: seasonLabel(season) + " · " + t(count === 1 ? "{n} episode" : "{n} episodes", { n: count })
             }),
             createEpisodeList(season)
         );
@@ -706,24 +721,24 @@ function createSeasons(movie) {
     // Open the first season by default so episodes are visible straight away.
     show(seasons[0], buttons[0]);
 
-    return el("section", { class: "seasons" }, el("h2", { text: "Seasons" }), tabs, panel);
+    return el("section", { class: "seasons" }, el("h2", { text: t("Seasons") }), tabs, panel);
 }
 
 function showMovieDetails(movie) {
-    const title = movie.title || "Untitled movie";
+    const title = movie.title || untitled();
 
     // Facts list (only shows fields that exist).
     const facts = [];
-    if (movie.runtime) facts.push([isSeries(movie) ? "Episode length" : "Runtime", movie.runtime + " min"]);
-    if (movie.director) facts.push([isSeries(movie) ? "Creator" : "Director", movie.director]);
+    if (movie.runtime) facts.push([t(isSeries(movie) ? "Episode length" : "Runtime"), t("{n} min", { n: movie.runtime })]);
+    if (movie.director) facts.push([t(isSeries(movie) ? "Creator" : "Director"), movie.director]);
 
     const cast = Array.isArray(movie.cast) ? movie.cast.join(", ") : movie.cast;
-    if (cast) facts.push(["Cast", cast]);
-    if (movie.releaseDate) facts.push(["Released", movie.releaseDate]);
+    if (cast) facts.push([t("Cast"), cast]);
+    if (movie.releaseDate) facts.push([t("Released"), movie.releaseDate]);
     if (movie.interpreted === true) {
-        facts.push(["Interpreted", movie.interpreter ? "By " + movie.interpreter : "Yes"]);
+        facts.push([t("Interpreted|one"), movie.interpreter ? t("By {name}", { name: movie.interpreter }) : t("Yes")]);
     }
-    if (movie.subtitled === true) facts.push(["Subtitles", "Available"]);
+    if (movie.subtitled === true) facts.push([t("Subtitles"), t("Available")]);
 
     const factsList = facts.length
         ? el(
@@ -747,7 +762,7 @@ function showMovieDetails(movie) {
                 href: watchUrl,
                 target: "_blank",
                 rel: "noopener noreferrer",
-                text: "Watch " + kindWord(movie)
+                text: watchLabel(movie)
             })
         );
     }
@@ -760,7 +775,7 @@ function showMovieDetails(movie) {
                 href: downloadUrl,
                 target: "_blank",
                 rel: "noopener noreferrer",
-                text: "Download " + kindWord(movie)
+                text: downloadLabel(movie)
             })
         );
     }
@@ -771,10 +786,10 @@ function showMovieDetails(movie) {
         ? el(
               "section",
               { class: "details-trailer" },
-              el("h2", { text: "Trailer" }),
+              el("h2", { text: t("Trailer") }),
               el("iframe", {
                   src: "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(videoId),
-                  title: title + " trailer",
+                  title: t("{title} trailer", { title }),
                   loading: "lazy",
                   allow: "accelerometer; encrypted-media; gyroscope; picture-in-picture; web-share",
                   allowfullscreen: true,
@@ -785,7 +800,7 @@ function showMovieDetails(movie) {
 
     // replaceChildren turns null into the text "null", so drop empty sections.
     const sections = [
-        el("a", { class: "back-link", href: "#", text: "← All titles" }),
+        el("a", { class: "back-link", href: "#", text: t("← All titles") }),
         el(
             "div",
             { class: "details-content" },
@@ -797,7 +812,7 @@ function showMovieDetails(movie) {
                 el("p", { class: "details-meta", text: movieMeta(movie) }),
                 el("p", {
                     class: "details-description",
-                    text: movie.description || "No description available."
+                    text: movie.description || t("No description available.")
                 }),
                 factsList,
                 actions
@@ -819,16 +834,16 @@ function showNotFound() {
         el(
             "div",
             { class: "not-found" },
-            el("h1", { text: "Title not found" }),
+            el("h1", { text: t("Title not found") }),
             el("p", {
                 class: "status",
-                text: "This title may have been removed or the link is wrong."
+                text: t("This title may have been removed or the link is wrong.")
             }),
-            el("a", { class: "btn", href: "#", text: "Browse all movies" })
+            el("a", { class: "btn", href: "#", text: t("Browse all movies") })
         )
     );
 
-    setPageInfo("Title not found");
+    setPageInfo(t("Title not found"));
     setView("details");
 }
 
@@ -1000,7 +1015,7 @@ function writeCache(movies) {
 
 async function loadMovies() {
     showSkeletons();
-    els.status.textContent = "Loading movies...";
+    els.status.textContent = t("Loading movies...");
 
     try {
         let movies = readCache();
@@ -1018,7 +1033,7 @@ async function loadMovies() {
 
         if (!state.movies.length) {
             els.list.replaceChildren();
-            els.status.textContent = "No movies available yet. Check back soon.";
+            els.status.textContent = t("No movies available yet. Check back soon.");
             route();
             return;
         }
@@ -1033,10 +1048,24 @@ async function loadMovies() {
         console.error("Error loading movies:", error);
         els.list.replaceChildren();
         els.status.textContent =
-            "Movies could not be loaded. Check your connection and refresh the page.";
+            t("Movies could not be loaded. Check your connection and refresh the page.");
         els.status.hidden = false;
     }
 }
+
+// When the visitor changes language, redraw the parts that script.js builds.
+window.addEventListener("nhm-lang", () => {
+    if (state.loaded && state.movies.length) {
+        fillGenreOptions();
+        els.genre.value = state.genre;
+        renderFeatured();
+        renderRows();
+        renderList();
+    }
+
+    if (!els.detailsView.hidden) route();
+    else setPageInfo("");
+});
 
 route();
 loadMovies();

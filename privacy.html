@@ -16,6 +16,10 @@
         <a class="logo" href="index.html" aria-label="New Hit Movies, home">
             <img src="logo-small.png" alt="" width="36" height="36"><span>New Hit Movies</span>
         </a>
+        <div class="lang-switch" role="group" aria-label="Language">
+            <button type="button" data-lang="en" aria-pressed="true" title="English">EN</button>
+            <button type="button" data-lang="rw" aria-pressed="false" title="Kinyarwanda">RW</button>
+        </div>
         <button id="menu-toggle" class="menu-toggle" type="button" aria-expanded="false" aria-controls="main-nav" aria-label="Menu">&#9776;</button>
         <nav class="main-nav" id="main-nav" aria-label="Main">
             <a href="index.html#all">Home</a>
@@ -24,7 +28,7 @@
             <a href="index.html#interpreted">Interpreted</a>
             <a href="index.html#subtitles">Subtitles</a>
             <a href="index.html#about">About</a>
-            <a href="request.html">Request</a>
+            <a class="nav-request" href="request.html">Request</a>
         </nav>
     </header>
 
@@ -82,5 +86,7 @@
             });
         })();
     </script>
+    <a class="wa-float" href="https://whatsapp.com/channel/0029VbD97se47Xe9yEDhUK1x" target="_blank" rel="noopener noreferrer" aria-label="Join our WhatsApp channel"><svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true" focusable="false"><path d="M12 3a9 9 0 0 0-7.7 13.6L3 21l4.500-1.200A9 9 0 1 0 12 3z" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linejoin="round"/><path d="M9.200 7.800c-.4.400-.7 1-.5 1.900.5 2.300 2.600 4.400 4.900 4.900.9.200 1.500-.1 1.900-.5l.4-.7-1.800-1.100-.8.700c-1-.4-1.900-1.300-2.300-2.300l.7-.8-1-1.800z" fill="currentColor"/></svg></a>
+<script src="i18n.js"></script>
 </body>
 </html>

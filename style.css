@@ -602,3 +602,208 @@ input, select {
     .dot.is-active i::after { animation: none; width: 100%; }
     .slider-pause { display: none; }
 }
+
+/* WhatsApp channel card, follow buttons and floating button */
+.wa-section { max-width: 1200px; margin: 20px auto 0; padding: 0 20px; }
+
+.wa-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px;
+    border-radius: 18px;
+    border: 1px solid #1f7a4a;
+    border-left: 4px solid #25d366;
+    background: linear-gradient(90deg, #0f2a20, #14161d);
+    color: #fff;
+    text-decoration: none;
+}
+.wa-card:hover { border-color: #25d366; }
+.wa-icon {
+    flex: none;
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    background: #123a29;
+    color: #25d366;
+    display: grid;
+    place-items: center;
+}
+.wa-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.wa-text strong { font-size: 18px; }
+.wa-text span { color: #9fb8aa; font-size: 14px; line-height: 1.35; }
+.wa-plus {
+    flex: none;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: #25d366;
+    color: #06220f;
+    font-size: 30px;
+    font-weight: 700;
+    line-height: 1;
+    display: grid;
+    place-items: center;
+}
+
+.follow { margin-top: 18px; }
+.follow h2 { font-size: 18px; margin: 0 0 10px; }
+.follow-buttons { display: flex; flex-wrap: wrap; gap: 10px; }
+.social-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 16px;
+    border-radius: 999px;
+    color: #fff;
+    font-weight: 700;
+    text-decoration: none;
+}
+.social-ig { background: linear-gradient(45deg, #f09433, #dc2743 55%, #bc1888); }
+.social-fb { background: #1877f2; }
+.social-tt { background: #111; border: 1px solid #fe2c55; box-shadow: inset 3px 0 0 #25f4ee, inset -3px 0 0 #fe2c55; }
+.social-btn:hover { filter: brightness(1.12); }
+
+/* A button with no link yet stays hidden */
+.social-btn[href=""] { display: none; }
+.follow:not(:has(.social-btn:not([href=""]))) { display: none; }
+
+.wa-float {
+    position: fixed;
+    right: 16px;
+    bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+    z-index: 30;
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    border: 2px solid #25d366;
+    background: #0f2a20;
+    color: #25d366;
+    display: grid;
+    place-items: center;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+}
+.wa-float:hover { background: #25d366; color: #06220f; }
+
+@media (max-width: 640px) {
+    .wa-text strong { font-size: 16px; }
+    .wa-text span { font-size: 13px; }
+}
+
+/* Request: make it stand out */
+.main-nav a.nav-request,
+.site-header .main-nav a.nav-request {
+    background: linear-gradient(90deg, #ffd23f, #ff8a00);
+    color: #1a1100;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 7px 16px;
+    border-radius: 999px;
+    border-top: 0;
+    animation: requestPulse 2.2s ease-in-out infinite;
+}
+.main-nav a.nav-request:hover { filter: brightness(1.08); }
+@media (max-width: 640px) {
+    .site-header .main-nav a.nav-request { display: inline-block; margin: 10px 0 6px; padding: 12px 20px; text-align: center; }
+}
+
+.request-banner {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 18px;
+    padding: 18px;
+    border-radius: 18px;
+    background: linear-gradient(100deg, #ffd23f, #ff8a00);
+    color: #1a1100;
+    text-decoration: none;
+    box-shadow: 0 8px 26px rgba(255, 138, 0, 0.35);
+}
+.request-icon { flex: none; font-size: 42px; line-height: 1; }
+.request-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.request-copy strong { font-size: 28px; line-height: 1.05; letter-spacing: 0.02em; font-weight: 900; }
+.request-copy span { font-size: 14px; font-weight: 600; line-height: 1.35; }
+.request-go {
+    flex: none;
+    padding: 12px 18px;
+    border-radius: 999px;
+    background: #1a1100;
+    color: #ffd23f;
+    font-weight: 800;
+    white-space: nowrap;
+    animation: requestPulse 2.2s ease-in-out infinite;
+}
+.request-banner:hover { filter: brightness(1.05); }
+
+@media (max-width: 640px) {
+    .request-banner { flex-wrap: wrap; }
+    .request-copy { flex-basis: calc(100% - 70px); }
+    .request-go { width: 100%; text-align: center; }
+    .request-copy strong { font-size: 26px; }
+}
+
+.legal h1.request-title { font-size: 26px; line-height: 1.2; color: var(--text, #fff); }
+.request-title span {
+    display: block;
+    font-size: 54px;
+    font-weight: 900;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    background: linear-gradient(90deg, #ffd23f, #ff8a00);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+.request-form .btn.btn-send,
+.btn.btn-send {
+    width: 100%;
+    padding: 15px;
+    font-size: 18px;
+    font-weight: 800;
+    border: 0;
+    background: linear-gradient(90deg, #ffd23f, #ff8a00) !important;
+    color: #1a1100;
+}
+
+@keyframes requestPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 170, 0, 0.55); }
+    50% { box-shadow: 0 0 0 10px rgba(255, 170, 0, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .nav-request, .request-go { animation: none !important; }
+}
+
+/* Language switcher (English / Kinyarwanda) */
+.lang-switch {
+    order: 2;
+    display: inline-flex;
+    border: 1px solid var(--line-strong, #3a3a4c);
+    border-radius: 999px;
+    overflow: hidden;
+}
+.lang-switch button {
+    padding: 7px 12px;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+}
+.lang-switch button[aria-pressed="true"] {
+    background: #25d366;
+    color: #06220f;
+}
+@media (max-width: 640px) {
+    .lang-switch { order: 1; margin-left: auto; }
+    .site-header .menu-toggle { order: 2; }
+    .site-header .main-nav { order: 3; }
+}
+
+@media (max-width: 640px) {
+    .site-header { padding: 12px 14px; gap: 8px; }
+    .site-header .logo { font-size: 19px; }
+    .lang-switch button { padding: 6px 9px; }
+}

@@ -7,6 +7,12 @@ import {
 
 const $ = id => document.getElementById(id);
 
+// Text comes from i18n.js (English / Kinyarwanda).
+const t = (key, vars) =>
+    window.I18N
+        ? window.I18N.t(key, vars)
+        : String(key).replace(/\{(\w+)\}/g, (m, k) => (vars && vars[k] !== undefined ? vars[k] : m));
+
 const form = $("request-form");
 const messageBox = $("request-message");
 const sendButton = $("send");
@@ -31,14 +37,14 @@ form.addEventListener("submit", async event => {
     // Spam trap: pretend it worked, send nothing.
     if ($("r-website").value) {
         form.reset();
-        say("Thank you! Your message was sent.", "ok");
+        say(t("Thank you! Your message was sent."), "ok");
         return;
     }
 
     try {
         const last = Number(localStorage.getItem(COOLDOWN_KEY) || 0);
         if (Date.now() - last < COOLDOWN_MS) {
-            say("Please wait a minute before sending another message.", "error");
+            say(t("Please wait a minute before sending another message."), "error");
             return;
         }
     } catch {
@@ -47,12 +53,12 @@ form.addEventListener("submit", async event => {
 
     const title = $("r-title").value.trim();
     if (!title) {
-        say("Please enter a title.", "error");
+        say(t("Please enter a title."), "error");
         return;
     }
 
     sendButton.disabled = true;
-    say("Sending...", "");
+    say(t("Sending..."), "");
 
     try {
         await addDoc(collection(db, "requests"), {
@@ -69,10 +75,11 @@ form.addEventListener("submit", async event => {
         }
 
         form.reset();
-        say("Thank you! Your message was sent.", "ok");
+        say(t("Thank you! Your message was sent."), "ok");
     } catch (error) {
         console.error(error);
-        say("Could not send right now. Please try again later or email us.", "error");
+        const code = error && error.code ? " (" + String(error.code).replace("firestore/", "") + ")" : "";
+        say(t("Could not send right now{code}. Please try again later or email us.", { code }), "error");
     } finally {
         sendButton.disabled = false;
     }
