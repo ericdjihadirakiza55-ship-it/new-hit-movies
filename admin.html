@@ -45,6 +45,11 @@
         .admin-item:last-child { border-bottom: none; }
         .admin-item p { margin: 0; }
         .admin-item .sub { color: var(--muted); font-size: 13px; }
+        .req-tag { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; margin-right: 8px; color: #1a1100; background: #ffd23f; }
+        .req-tag.report { background: #ff7b7b; }
+        .req-tag.other { background: #b8b8c8; }
+        .req-msg { color: var(--muted); font-size: 14px; margin-top: 4px !important; white-space: pre-wrap; overflow-wrap: anywhere; }
+        .req-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
         .btn-danger { background: #7a1c1c; }
         .btn-danger:hover { background: #a02525; }
         .season-box { border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-bottom: 12px; }
@@ -76,6 +81,14 @@
         <!-- Admin panel -->
         <div id="panel" hidden>
             <p><button id="logout" class="btn btn-secondary" type="button">Log out</button></p>
+
+            <section class="panel-box">
+                <div class="req-head">
+                    <h2>Visitor requests <span id="req-count"></span></h2>
+                    <button id="req-refresh" class="btn btn-secondary" type="button">Refresh</button>
+                </div>
+                <div id="requests-list"><p class="status">Loading...</p></div>
+            </section>
 
             <section class="panel-box">
                 <h2 id="form-title">Add a movie</h2>

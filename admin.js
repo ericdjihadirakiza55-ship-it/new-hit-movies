@@ -5,7 +5,10 @@ import {
     addDoc,
     doc,
     setDoc,
-    deleteDoc
+    deleteDoc,
+    query,
+    orderBy,
+    limit
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import {
     onAuthStateChanged,
@@ -28,6 +31,8 @@ const adminList = $("admin-list");
 const typeSelect = $("f-type");
 const seasonsBox = $("seasons-box");
 const seasonsList = $("seasons-list");
+const requestsList = $("requests-list");
+const requestCount = $("req-count");
 
 const TEXT_FIELDS = [
     "title", "genre", "releaseDate", "director", "cast",
@@ -232,7 +237,10 @@ onAuthStateChanged(auth, user => {
     loginBox.hidden = !!user;
     panel.hidden = !user;
 
-    if (user) loadMovies();
+    if (user) {
+        loadMovies();
+        loadRequests();
+    }
 });
 
 loginForm.addEventListener("submit", async event => {
@@ -330,6 +338,115 @@ function renderList() {
 
     adminList.replaceChildren(...rows);
 }
+
+/* ---------- Visitor requests ---------- */
+
+const REQUEST_LABELS = {
+    request: "Movie request",
+    report: "Problem report",
+    other: "Other"
+};
+
+async function loadRequests() {
+    requestsList.textContent = "Loading...";
+
+    try {
+        const snapshot = await getDocs(
+            query(collection(db, "requests"), orderBy("createdAt", "desc"), limit(100))
+        );
+        renderRequests(snapshot.docs.map(d => ({ ...d.data(), id: d.id })));
+    } catch (error) {
+        console.error(error);
+        requestCount.textContent = "";
+        requestsList.textContent =
+            error.code === "permission-denied"
+                ? "This account cannot read requests. Check the requests rule and the admin email in Firestore Rules."
+                : "Could not load requests. Try Refresh.";
+    }
+}
+
+function renderRequests(items) {
+    requestCount.textContent = items.length ? "(" + items.length + ")" : "";
+
+    if (!items.length) {
+        requestsList.textContent = "No requests yet.";
+        return;
+    }
+
+    const rows = items.map(item => {
+        const row = document.createElement("div");
+        row.className = "admin-item";
+
+        const info = document.createElement("div");
+        info.style.flex = "1 1 220px";
+
+        const head = document.createElement("p");
+        const tag = document.createElement("span");
+        const kind = REQUEST_LABELS[item.type] ? item.type : "other";
+        tag.className = "req-tag " + kind;
+        tag.textContent = REQUEST_LABELS[kind];
+        const title = document.createElement("strong");
+        title.textContent = item.title || "(no title)";
+        head.append(tag, title);
+
+        const sub = document.createElement("p");
+        sub.className = "sub";
+        const when = item.createdAt && item.createdAt.toDate ? item.createdAt.toDate() : null;
+        sub.textContent = when ? when.toLocaleString() : "";
+
+        info.append(head, sub);
+
+        if (item.message) {
+            const note = document.createElement("p");
+            note.className = "req-msg";
+            note.textContent = item.message;
+            info.append(note);
+        }
+
+        const actions = document.createElement("div");
+        actions.className = "form-actions";
+
+        if (kind === "request") {
+            const add = document.createElement("button");
+            add.type = "button";
+            add.className = "btn btn-secondary";
+            add.textContent = "Add this movie";
+            add.addEventListener("click", () => {
+                resetForm();
+                $("f-title").value = item.title || "";
+                message(formMessage, "Fill in the details, then press Save.", "ok");
+                movieForm.scrollIntoView({ behavior: "smooth" });
+            });
+            actions.append(add);
+        }
+
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "btn btn-danger";
+        remove.textContent = "Done / Delete";
+        remove.addEventListener("click", () => deleteRequest(item));
+        actions.append(remove);
+
+        row.append(info, actions);
+        return row;
+    });
+
+    requestsList.replaceChildren(...rows);
+}
+
+async function deleteRequest(item) {
+    if (!confirm('Delete the request "' + (item.title || "") + '"?')) return;
+
+    try {
+        await deleteDoc(doc(db, "requests", item.id));
+        await loadRequests();
+    } catch (error) {
+        console.error(error);
+        requestsList.textContent = "Could not delete. Try again.";
+    }
+}
+
+$("req-refresh").addEventListener("click", loadRequests);
 
 /* ---------- Add, edit, delete ---------- */
 
