@@ -1,7 +1,7 @@
 import { db } from "./firebase-config.js";
 import {
     collection,
-    getDocs
+    getDocsFromServer
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 /* ---------- Setup ---------- */
@@ -986,7 +986,7 @@ els.loadMore.addEventListener("click", () => {
 /* ---------- Load data ---------- */
 
 // Cache the movie list in the browser so repeat visits don't re-read Firestore.
-const CACHE_KEY = "nhm-movies-v2";
+const CACHE_KEY = "nhm-movies-v3";
 const CACHE_MINUTES = 5;
 
 function readCache() {
@@ -996,13 +996,16 @@ function readCache() {
 
         const { time, movies } = JSON.parse(raw);
         const fresh = Date.now() - time < CACHE_MINUTES * 60 * 1000;
-        return fresh && Array.isArray(movies) ? movies : null;
+        // An empty list is never trusted, so a quiet moment never hides new movies.
+        return fresh && Array.isArray(movies) && movies.length ? movies : null;
     } catch {
         return null;
     }
 }
 
 function writeCache(movies) {
+    if (!movies.length) return;
+
     try {
         localStorage.setItem(
             CACHE_KEY,
@@ -1013,15 +1016,23 @@ function writeCache(movies) {
     }
 }
 
+let loadingMovies = false;
+
 async function loadMovies() {
+    if (loadingMovies) return;
+    loadingMovies = true;
+
     showSkeletons();
+    els.status.hidden = false;
     els.status.textContent = t("Loading movies...");
 
     try {
         let movies = readCache();
 
         if (!movies) {
-            const snapshot = await getDocs(collection(db, "movies"));
+            // Ask the server directly. A plain getDocs() quietly returns an EMPTY list when the
+            // phone is offline, which made the site say "No movies" after losing signal.
+            const snapshot = await getDocsFromServer(collection(db, "movies"));
 
             // Keep the document ID so every movie has its own link.
             movies = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
@@ -1047,11 +1058,23 @@ async function loadMovies() {
     } catch (error) {
         console.error("Error loading movies:", error);
         els.list.replaceChildren();
-        els.status.textContent =
-            t("Movies could not be loaded. Check your connection and refresh the page.");
+        els.status.textContent = navigator.onLine
+            ? t("Movies could not be loaded. Check your connection and refresh the page.")
+            : t("You are offline. The movies will load when you are back online.");
         els.status.hidden = false;
+    } finally {
+        loadingMovies = false;
     }
 }
+
+// Try again by itself when the connection comes back or the person returns to the page.
+function retryIfNeeded() {
+    if (!state.loaded && !loadingMovies) loadMovies();
+}
+window.addEventListener("online", retryIfNeeded);
+document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) retryIfNeeded();
+});
 
 // When the visitor changes language, redraw the parts that script.js builds.
 window.addEventListener("nhm-lang", () => {

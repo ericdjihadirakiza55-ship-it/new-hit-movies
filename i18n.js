@@ -194,6 +194,7 @@
  "{n} title": "Filime {n}",
  "{n} titles": "Filime {n}",
  "Loading movies...": "Filime ziraje...",
+ "You are offline. The movies will load when you are back online.": "Nta interineti ufite. Filime ziraza kugaragara nongera kubona interineti.",
  "No movies available yet. Check back soon.": "Nta filime ziraboneka. Ongera ugaruke vuba.",
  "Movies could not be loaded. Check your connection and refresh the page.": "Filime ntizashoboye kuboneka. Reba interineti yawe maze uvugurure urupapuro.",
  "Thank you! Your message was sent.": "Murakoze! Ubutumwa bwawe bwoherejwe.",
