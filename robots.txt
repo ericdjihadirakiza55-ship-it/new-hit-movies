@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /admin.html
 
-Sitemap: https://new-hit-movies.newhitmovies.workers.dev/sitemap.xml
+Sitemap: https://newhitmovie.store/sitemap.xml
