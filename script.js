@@ -88,6 +88,15 @@ function safeUrl(value) {
     }
 }
 
+// Adds ?dl=1 so Cloudflare forces a download.
+function dlUrl(value) {
+    const u = safeUrl(value);
+    if (!u) return null;
+    const url = new URL(u);
+    url.searchParams.set("dl", "1");
+    return url.href;
+}
+
 // One place to turn any YouTube link into a video ID.
 function getYouTubeId(value) {
     const href = safeUrl(value);
@@ -235,14 +244,12 @@ function createCard(movie) {
         );
     }
 
-    const downloadUrl = safeUrl(movie.downloadUrl);
+    const downloadUrl = dlUrl(movie.downloadUrl);
     if (downloadUrl) {
         buttons.appendChild(
             el("a", {
                 class: "btn btn-secondary",
                 href: downloadUrl,
-                target: "_blank",
-                rel: "noopener noreferrer",
                 text: downloadLabel(movie)
             })
         );
@@ -657,14 +664,12 @@ function createEpisodeList(season) {
             );
         }
 
-        const download = safeUrl(ep.downloadUrl);
+        const download = dlUrl(ep.downloadUrl);
         if (download) {
             buttons.appendChild(
                 el("a", {
                     class: "btn btn-secondary",
                     href: download,
-                    target: "_blank",
-                    rel: "noopener noreferrer",
                     text: t("Download")
                 })
             );
@@ -767,14 +772,12 @@ function showMovieDetails(movie) {
         );
     }
 
-    const downloadUrl = safeUrl(movie.downloadUrl);
+    const downloadUrl = dlUrl(movie.downloadUrl);
     if (downloadUrl) {
         actions.appendChild(
             el("a", {
                 class: "btn btn-secondary",
                 href: downloadUrl,
-                target: "_blank",
-                rel: "noopener noreferrer",
                 text: downloadLabel(movie)
             })
         );
