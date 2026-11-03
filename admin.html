@@ -1,198 +1,211 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="robots" content="noindex, nofollow">
-    <title>Admin | New Hit Movies</title>
-    <link rel="stylesheet" href="style.css">
-    <style>
-        .admin { max-width: 760px; margin: 0 auto; padding: 25px 20px; }
-        .admin h1 { color: var(--accent); margin-top: 0; }
-        .panel-box {
-            background: var(--card);
-            border: 1px solid var(--line);
-            border-radius: var(--radius);
-            padding: 18px;
-            margin-bottom: 24px;
-        }
-        .field { display: block; margin-bottom: 14px; }
-        .field span { display: block; margin-bottom: 4px; color: var(--muted); font-size: 14px; }
-        .field input, .field select, .field textarea {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid var(--line);
-            border-radius: 6px;
-            background: var(--bg);
-            color: #fff;
-            font: inherit;
-        }
-        .field textarea { min-height: 110px; resize: vertical; }
-        .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .form-actions { display: flex; flex-wrap: wrap; gap: 10px; }
-        .message { min-height: 1.5em; margin: 12px 0 0; }
-        .message.error { color: #ff7b7b; }
-        .message.ok { color: #7bffa8; }
-        .admin-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-            padding: 12px 0;
-            border-bottom: 1px solid var(--line);
-        }
-        .admin-item:last-child { border-bottom: none; }
-        .admin-item p { margin: 0; }
-        .admin-item .sub { color: var(--muted); font-size: 13px; }
-        .req-tag { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; margin-right: 8px; color: #1a1100; background: #ffd23f; }
-        .req-tag.report { background: #ff7b7b; }
-        .req-tag.other { background: #b8b8c8; }
-        .req-msg { color: var(--muted); font-size: 14px; margin-top: 4px !important; white-space: pre-wrap; overflow-wrap: anywhere; }
-        .req-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
-        .btn-danger { background: #7a1c1c; }
-        .btn-danger:hover { background: #a02525; }
-        .season-box { border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-bottom: 12px; }
-        .topbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Admin | New Hit Movies</title>
+<link rel="stylesheet" href="style.css">
+<style>
+.admin { max-width: 760px; margin: 0 auto; padding: 25px 20px; }
+.admin h1 { color: var(--accent); margin-top: 0; }
+.panel-box {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-bottom: 24px;
+}
+.field { display: block; margin-bottom: 14px; }
+.field span { display: block; margin-bottom: 4px; color: var(--muted); font-size: 14px; }
+.field input, .field select, .field textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--bg);
+    color: #fff;
+    font: inherit;
+}
+.field textarea { min-height: 110px; resize: vertical; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.message { min-height: 1.5em; margin: 12px 0 0; }
+.message.error { color: #ff7b7b; }
+.message.ok { color: #7bffa8; }
+.admin-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line);
+}
+.admin-item:last-child { border-bottom: none; }
+.admin-item p { margin: 0; }
+.admin-item .sub { color: var(--muted); font-size: 13px; }
+.req-tag { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; margin-right: 8px; color: #1a1100; background: #ffd23f; }
+.req-tag.report { background: #ff7b7b; }
+.req-tag.other { background: #b8b8c8; }
+.req-msg { color: var(--muted); font-size: 14px; margin-top: 4px !important; white-space: pre-wrap; overflow-wrap: anywhere; }
+.req-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.btn-danger { background: #7a1c1c; }
+.btn-danger:hover { background: #a02525; }
+.season-box { border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+.topbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+</style>
 </head>
 <body>
-    <div class="admin">
-        <div class="topbar">
-            <h1>Admin</h1>
-            <a href="index.html">View site</a>
-        </div>
+<div class="admin">
+<div class="topbar">
+<h1>Admin</h1>
+<a href="index.html">View site</a>
+</div>
 
-        <!-- Login -->
-        <section id="login-box" class="panel-box" hidden>
-            <h2>Log in</h2>
-            <form id="login-form">
-                <label class="field"><span>Email</span>
-                    <input id="email" type="email" autocomplete="username" required>
-                </label>
-                <label class="field"><span>Password</span>
-                    <input id="password" type="password" autocomplete="current-password" required>
-                </label>
-                <button class="btn" type="submit">Log in</button>
-                <p id="login-message" class="message error" role="alert"></p>
-            </form>
-        </section>
+<!-- Login -->
+<section id="login-box" class="panel-box" hidden>
+<h2>Log in</h2>
+<form id="login-form">
+<label class="field"><span>Email</span>
+<input id="email" type="email" autocomplete="username" required>
+</label>
+<label class="field"><span>Password</span>
+<input id="password" type="password" autocomplete="current-password" required>
+</label>
+<button class="btn" type="submit">Log in</button>
+<p id="login-message" class="message error" role="alert"></p>
+</form>
+</section>
 
-        <!-- Admin panel -->
-        <div id="panel" hidden>
-            <p><button id="logout" class="btn btn-secondary" type="button">Log out</button></p>
+<!-- Admin panel -->
+<div id="panel" hidden>
+<p><button id="logout" class="btn btn-secondary" type="button">Log out</button></p>
 
-            <section class="panel-box">
-                <div class="req-head">
-                    <h2>Visitor requests <span id="req-count"></span></h2>
-                    <button id="req-refresh" class="btn btn-secondary" type="button">Refresh</button>
-                </div>
-                <div id="requests-list"><p class="status">Loading...</p></div>
-            </section>
+<section class="panel-box">
+<div class="req-head">
+<h2>Visitor requests <span id="req-count"></span></h2>
+<button id="req-refresh" class="btn btn-secondary" type="button">Refresh</button>
+</div>
+<div id="requests-list"><p class="status">Loading...</p></div>
+</section>
 
-            <section class="panel-box">
-                <h2 id="form-title">Add a movie</h2>
-                <form id="movie-form">
-                    <label class="field"><span>Type</span>
-                        <select id="f-type">
-                            <option value="movie">Movie</option>
-                            <option value="series">Series (with seasons)</option>
-                        </select>
-                    </label>
+<section class="panel-box">
+<h2 id="form-title">Add a movie</h2>
+<form id="movie-form">
+<label class="field"><span>Type</span>
+<select id="f-type">
+<option value="movie">Movie (one file)</option>
+<option value="parts">Movie with parts (Part 1, Part 2, ...)</option>
+<option value="series">Series (with seasons)</option>
+</select>
+</label>
 
-                    <label class="field"><span>Title *</span>
-                        <input id="f-title" type="text" required>
-                    </label>
+<label class="field"><span>Title *</span>
+<input id="f-title" type="text" required>
+</label>
 
-                    <div class="row">
-                        <label class="field"><span>Genre *</span>
-                            <select id="f-genre" required>
-                                <option value="">Choose genre</option>
-                                <option value="action">Action</option>
-                                <option value="comedy">Comedy</option>
-                                <option value="animation">Animation</option>
-                                <option value="fantasy">Fantasy</option>
-                                <option value="scifi">Sci-Fi</option>
-                                <option value="horror">Horror</option>
-                                <option value="drama">Drama</option>
-                                <option value="romance">Romance</option>
-                            </select>
-                        </label>
-                        <label class="field"><span>Year</span>
-                            <input id="f-year" type="number" min="1900" max="2100">
-                        </label>
-                    </div>
+<div class="row">
+<label class="field"><span>Genre *</span>
+<select id="f-genre" required>
+<option value="">Choose genre</option>
+<option value="action">Action</option>
+<option value="comedy">Comedy</option>
+<option value="animation">Animation</option>
+<option value="fantasy">Fantasy</option>
+<option value="scifi">Sci-Fi</option>
+<option value="horror">Horror</option>
+<option value="drama">Drama</option>
+<option value="romance">Romance</option>
+</select>
+</label>
+<label class="field"><span>Year</span>
+<input id="f-year" type="number" min="1900" max="2100">
+</label>
+</div>
 
-                    <div class="row">
-                        <label class="field"><span>Release date</span>
-                            <input id="f-releaseDate" type="date">
-                        </label>
-                        <label class="field"><span>Rating (0 to 10)</span>
-                            <input id="f-rating" type="number" min="0" max="10" step="0.1">
-                        </label>
-                    </div>
+<div class="row">
+<label class="field"><span>Release date</span>
+<input id="f-releaseDate" type="date">
+</label>
+<label class="field"><span>Rating (0 to 10)</span>
+<input id="f-rating" type="number" min="0" max="10" step="0.1">
+</label>
+</div>
 
-                    <div class="row">
-                        <label class="field"><span id="runtime-label">Runtime (minutes)</span>
-                            <input id="f-runtime" type="number" min="1">
-                        </label>
-                        <label class="field"><span id="director-label">Director</span>
-                            <input id="f-director" type="text">
-                        </label>
-                    </div>
+<div class="row">
+<label class="field"><span id="runtime-label">Runtime (minutes)</span>
+<input id="f-runtime" type="number" min="1">
+</label>
+<label class="field"><span id="director-label">Director</span>
+<input id="f-director" type="text">
+</label>
+</div>
 
-                    <label class="field"><span>Cast (separate names with commas)</span>
-                        <input id="f-cast" type="text">
-                    </label>
+<label class="field"><span>Cast (separate names with commas)</span>
+<input id="f-cast" type="text">
+</label>
 
-                    <label class="field"><span>Description</span>
-                        <textarea id="f-description"></textarea>
-                    </label>
+<label class="field"><span>Description</span>
+<textarea id="f-description"></textarea>
+</label>
 
-                    <fieldset class="checks">
-                        <legend>Version and promotion</legend>
-                        <label class="check"><input id="f-interpreted" type="checkbox"> Interpreted version (narrated / translated)</label>
-                        <label class="field"><span>Interpreter name (optional)</span>
-                            <input id="f-interpreter" type="text" placeholder="e.g. VJ name">
-                        </label>
-                        <label class="check"><input id="f-subtitled" type="checkbox"> Has subtitles</label>
-                        <label class="check"><input id="f-featured" type="checkbox"> Show in the top slider (up to 5 are shown)</label>
-                    </fieldset>
+<fieldset class="checks">
+<legend>Version and promotion</legend>
+<label class="check"><input id="f-interpreted" type="checkbox"> Interpreted version (narrated / translated)</label>
+<label class="field"><span>Interpreter name (optional)</span>
+<input id="f-interpreter" type="text" placeholder="e.g. VJ name">
+</label>
+<label class="check"><input id="f-subtitled" type="checkbox"> Has subtitles</label>
+<label class="check"><input id="f-featured" type="checkbox"> Show in the top slider (up to 5 are shown)</label>
+</fieldset>
 
-                    <div id="seasons-box" hidden>
-                        <h3>Seasons</h3>
-                        <div id="seasons-list"></div>
-                        <p><button id="add-season" class="btn btn-secondary" type="button">+ Add season</button></p>
-                    </div>
+<!-- Movie with parts -->
+<div id="parts-box" hidden>
+<h3>Parts</h3>
+<label class="field"><span>One part per line: number | title | watch link | download link</span>
+<textarea id="f-parts" placeholder="1 | Part 1 | https://watch-link | https://download-link&#10;2 | Part 2 | https://watch-link | https://download-link"></textarea>
+</label>
+</div>
 
-                    <label class="field"><span>Poster image link (https)</span>
-                        <input id="f-posterUrl" type="url" placeholder="https://">
-                    </label>
-                    <label class="field"><span>Watch link (https)</span>
-                        <input id="f-watchUrl" type="url" placeholder="https://">
-                    </label>
-                    <label class="field"><span>Download link (https)</span>
-                        <input id="f-downloadUrl" type="url" placeholder="https://">
-                    </label>
-                    <label class="field"><span>YouTube trailer link</span>
-                        <input id="f-trailerUrl" type="url" placeholder="https://www.youtube.com/watch?v=...">
-                    </label>
+<div id="seasons-box" hidden>
+<h3>Seasons</h3>
+<div id="seasons-list"></div>
+<p><button id="add-season" class="btn btn-secondary" type="button">+ Add season</button></p>
+</div>
 
-                    <div class="form-actions">
-                        <button id="save" class="btn" type="submit">Save movie</button>
-                        <button id="cancel" class="btn btn-secondary" type="button" hidden>Cancel editing</button>
-                    </div>
-                    <p id="form-message" class="message" role="status" aria-live="polite"></p>
-                </form>
-            </section>
+<label class="field"><span>Poster image link (https)</span>
+<input id="f-posterUrl" type="url" placeholder="https://">
+</label>
 
-            <section class="panel-box">
-                <h2>Your movies</h2>
-                <div id="admin-list"><p class="status">Loading...</p></div>
-            </section>
-        </div>
-    </div>
+<label class="field"><span>Watch link (https), for a single-file movie</span>
+<input id="f-watchUrl" type="url" placeholder="https://">
+</label>
 
-    <script type="module" src="admin.js"></script>
+<label class="field"><span>Download link (https), for a single-file movie</span>
+<input id="f-downloadUrl" type="url" placeholder="https://">
+</label>
+
+<label class="field"><span>YouTube trailer link</span>
+<input id="f-trailerUrl" type="url" placeholder="https://www.youtube.com/watch?v=...">
+</label>
+
+<div class="form-actions">
+<button id="save" class="btn" type="submit">Save movie</button>
+<button id="cancel" class="btn btn-secondary" type="button" hidden>Cancel editing</button>
+</div>
+
+<p id="form-message" class="message" role="status" aria-live="polite"></p>
+</form>
+</section>
+
+<section class="panel-box">
+<h2>Your movies</h2>
+<div id="admin-list"><p class="status">Loading...</p></div>
+</section>
+</div>
+</div>
+
+<script type="module" src="admin.js"></script>
 </body>
 </html>
