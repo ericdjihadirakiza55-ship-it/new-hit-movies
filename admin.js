@@ -31,6 +31,8 @@ const adminList = $("admin-list");
 const typeSelect = $("f-type");
 const seasonsBox = $("seasons-box");
 const seasonsList = $("seasons-list");
+const partsBox = $("parts-box");
+const partsText = $("f-parts");
 const requestsList = $("requests-list");
 const requestCount = $("req-count");
 
@@ -74,6 +76,7 @@ function isHttps(value) {
 
 function updateTypeUI() {
     const series = typeSelect.value === "series";
+    partsBox.hidden = typeSelect.value !== "parts";
     seasonsBox.hidden = !series;
     $("runtime-label").textContent = series ? "Episode length (minutes)" : "Runtime (minutes)";
     $("director-label").textContent = series ? "Creator" : "Director";
@@ -86,6 +89,45 @@ function episodesToText(list) {
     return (list || [])
         .map(e => [e.number, e.title || "", e.watchUrl || "", e.downloadUrl || ""].join(" | "))
         .join("\n");
+}
+
+function partsToText(list) {
+    return (list || [])
+        .map(p => [p.number, p.title || "", p.watchUrl || "", p.downloadUrl || ""].join(" | "))
+        .join("\n");
+}
+
+function readParts() {
+    const parts = [];
+    const used = new Set();
+
+    for (const line of partsText.value.split("\n")) {
+        if (!line.trim()) continue;
+
+        const [num, title, watch, download] = line.split("|").map(x => x.trim());
+        const n = Number(num);
+
+        if (!num || !Number.isInteger(n) || n < 1) {
+            return { error: "Each part line must start with a part number (1, 2, 3...)." };
+        }
+        if (used.has(n)) return { error: "Part " + n + " is listed twice." };
+        used.add(n);
+
+        const part = { number: n };
+        if (title) part.title = title;
+
+        for (const [value, key] of [[watch, "watchUrl"], [download, "downloadUrl"]]) {
+            if (!value) continue;
+            if (!isHttps(value)) {
+                return { error: "Part " + n + ": links must start with https://" };
+            }
+            part[key] = value;
+        }
+        parts.push(part);
+    }
+
+    if (!parts.length) return { error: "Add at least one part." };
+    return { parts: parts.sort((a, b) => a.number - b.number) };
 }
 
 function addSeasonRow(season = {}) {
@@ -200,7 +242,13 @@ function readForm() {
 }
 
 function fillForm(movie) {
-    typeSelect.value = movie.type === "series" ? "series" : "movie";
+    typeSelect.value =
+        movie.type === "series"
+            ? "series"
+            : Array.isArray(movie.parts) && movie.parts.length
+              ? "parts"
+              : "movie";
+    partsText.value = partsToText(movie.parts);
     seasonsList.replaceChildren();
     (movie.seasons || []).forEach(season => addSeasonRow(season));
     updateTypeUI();
@@ -308,6 +356,7 @@ function renderList() {
         const count = (movie.seasons || []).length;
         sub.textContent = [
             movie.type === "series" ? "Series, " + count + (count === 1 ? " season" : " seasons") : "",
+            Array.isArray(movie.parts) && movie.parts.length ? movie.parts.length + " parts" : "",
             movie.year,
             movie.genre,
             movie.interpreted ? "Interpreted" : "",
@@ -476,6 +525,14 @@ movieForm.addEventListener("submit", async event => {
         }
         data.type = "series";
         data.seasons = result.seasons;
+    } else if (typeSelect.value === "parts") {
+        const result = readParts();
+        if (result.error) {
+            message(formMessage, result.error, "error");
+            return;
+        }
+        data.type = "movie";
+        data.parts = result.parts;
     } else {
         data.type = "movie";
     }
