@@ -137,6 +137,54 @@ function getSeasons(movie) {
         : [];
 }
 
+// Movies uploaded in parts (Part 1, Part 2, ...) as ONE title.
+function getParts(movie) {
+    return Array.isArray(movie.parts)
+        ? [...movie.parts].sort((a, b) => (a.number || 0) - (b.number || 0))
+        : [];
+}
+
+function createParts(movie) {
+    const parts = getParts(movie);
+    if (!parts.length) return null;
+
+    const items = parts.map((part, i) => {
+        const number = part.number || i + 1;
+        const buttons = el("div", { class: "episode-buttons" });
+
+        const watch = safeUrl(part.watchUrl);
+        if (watch) {
+            buttons.appendChild(
+                el("a", { class: "btn", href: watch, target: "_blank", rel: "noopener noreferrer", text: t("Watch") })
+            );
+        }
+
+        const download = dlUrl(part.downloadUrl);
+        if (download) {
+            buttons.appendChild(el("a", { class: "btn btn-secondary", href: download, text: t("Download") }));
+        }
+
+        return el(
+            "li",
+            { class: "episode" },
+            el(
+                "div",
+                { class: "episode-head" },
+                el("span", { class: "episode-badge", text: "P" + number }),
+                el("h3", { text: part.title || t("Part {n}", { n: number }) })
+            ),
+            buttons.children.length ? buttons : null
+        );
+    });
+
+    return el(
+        "section",
+        { class: "seasons" },
+        el("h2", { text: t("Parts") + " · " + parts.length }),
+        el("ul", { class: "episode-list" }, ...items)
+    );
+}
+
 function seasonText(count) {
     return t(count === 1 ? "{n} season" : "{n} seasons", { n: count });
 }
@@ -154,6 +202,7 @@ function movieMeta(movie) {
     if (g) parts.push(g);
     if (movie.rating) parts.push("★ " + movie.rating);
     if (isSeries(movie)) parts.push(seasonText(getSeasons(movie).length));
+    else if (getParts(movie).length) parts.push(t("{n} parts", { n: getParts(movie).length }));
     return parts.join(" · ");
 }
 
@@ -229,49 +278,13 @@ function createCard(movie) {
         interpreterLine(movie)
     );
 
-    const buttons = el("div", { class: "movie-buttons" });
-
-    const watchUrl = safeUrl(movie.watchUrl);
-    if (watchUrl) {
-        buttons.appendChild(
-            el("a", {
-                class: "btn",
-                href: watchUrl,
-                target: "_blank",
-                rel: "noopener noreferrer",
-                text: watchLabel(movie)
-            })
-        );
-    }
-
-    const downloadUrl = dlUrl(movie.downloadUrl);
-    if (downloadUrl) {
-        buttons.appendChild(
-            el("a", {
-                class: "btn btn-secondary",
-                href: downloadUrl,
-                text: downloadLabel(movie)
-            })
-        );
-    }
-
-    // Always shown, even when a movie has no links.
-    buttons.appendChild(
-        el("a", {
-            class: "btn btn-outline",
-            href: "#movie=" + encodeURIComponent(movie.id),
-            text: t("View Details")
-        })
-    );
-
     const badges = getBadges(movie);
 
     return el(
         "article",
         { class: "movie" },
         badges.length ? el("div", { class: "badges" }, ...badges) : null,
-        link,
-        buttons
+        link
     );
 }
 
@@ -432,23 +445,9 @@ function createSlide(movie, index, total) {
         description.length > 200 ? description.slice(0, 197) + "..." : description;
 
     const actions = el("div", { class: "details-actions" });
-    const watchUrl = safeUrl(movie.watchUrl);
-
-    if (watchUrl) {
-        actions.appendChild(
-            el("a", {
-                class: "btn",
-                href: watchUrl,
-                target: "_blank",
-                rel: "noopener noreferrer",
-                text: watchLabel(movie)
-            })
-        );
-    }
-
     actions.appendChild(
         el("a", {
-            class: watchUrl ? "btn btn-outline" : "btn",
+            class: "btn",
             href: "#movie=" + encodeURIComponent(movie.id),
             text: t("View details")
         })
@@ -822,6 +821,7 @@ function showMovieDetails(movie) {
             )
         ),
         createSeasons(movie),
+        createParts(movie),
         trailer,
         createRelated(movie)
     ].filter(Boolean);
