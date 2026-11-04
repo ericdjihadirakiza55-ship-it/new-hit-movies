@@ -807,18 +807,49 @@ input, select {
     .site-header .logo { font-size: 19px; }
     .lang-switch button { padding: 6px 9px; }
 }
-/* ===== Add this at the very BOTTOM of style.css ===== */
 
 /* Quick category chips */
-.chips{display:flex;gap:10px;overflow-x:auto;padding:12px 20px;scrollbar-width:none}
-.chips::-webkit-scrollbar{display:none}
-.chips a{flex:0 0 auto;padding:9px 16px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:#fff;text-decoration:none;font-size:14px;font-weight:600;white-space:nowrap}
-.chips a:active{background:var(--accent)}
+.chips {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 12px 20px;
+    scrollbar-width: none;
+}
+.chips::-webkit-scrollbar { display: none; }
+.chips a {
+    flex: 0 0 auto;
+    padding: 9px 16px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--card);
+    color: #fff;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.chips a:active { background: var(--accent); }
 
-/* Card polish (cards now have no buttons) */
-.movie{transition:transform .2s}
-.movie:hover{transform:translateY(-4px)}
-.movie-link{display:block}
+/* About paragraph spacing */
+.about p {
+    line-height: 1.6;
+    margin: 0 0 12px;
+}
 
-/* About paragraphs spacing */
-.about p{line-height:1.6;margin:0 0 12px}
+/* Reserve space for the featured slider while its content loads.
+   The visible slider uses a 430px minimum height on desktop. */
+#featured {
+    min-height: 430px;
+}
+#featured[hidden] {
+    display: block !important;
+    visibility: hidden;
+}
+
+/* On small screens, the slider uses a shorter layout. */
+@media (max-width: 640px) {
+    #featured {
+        min-height: 300px;
+    }
+}
