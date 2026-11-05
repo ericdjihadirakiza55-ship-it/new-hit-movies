@@ -232,7 +232,7 @@ function setPageInfo(title, description) {
 
 /* ---------- Building blocks ---------- */
 
-function createPoster(movie) {
+function createPoster(movie, priority = false) {
     const poster = el("div", { class: "poster" });
     const posterUrl = safeUrl(movie.posterUrl);
 
@@ -246,7 +246,9 @@ function createPoster(movie) {
         alt: t("{title} poster", { title: movie.title || t("Movie") }),
         width: 300,
         height: 450,
-        loading: "lazy"
+        loading: priority ? "eager" : "lazy",
+        decoding: "async",
+        fetchpriority: priority ? "high" : null
     });
 
     img.addEventListener("error", () => {
@@ -812,7 +814,7 @@ function showMovieDetails(movie) {
         el(
             "div",
             { class: "details-content" },
-            createPoster(movie),
+            createPoster(movie, true),
             el(
                 "div",
                 { class: "details-info" },
