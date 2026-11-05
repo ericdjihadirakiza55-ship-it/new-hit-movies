@@ -47,6 +47,7 @@ const URL_FIELDS = ["posterUrl", "watchUrl", "downloadUrl", "trailerUrl"];
 
 let movies = [];
 let editingId = null;
+let editingAddedAt = 0;
 
 // The public site caches the movie list for a few minutes; clear it so
 // changes made here show up straight away.
@@ -275,6 +276,7 @@ function resetForm() {
     movieForm.reset();
     seasonsList.replaceChildren();
     editingId = null;
+    editingAddedAt = 0;
     updateTypeUI();
     cancelButton.hidden = true;
 }
@@ -501,6 +503,7 @@ $("req-refresh").addEventListener("click", loadRequests);
 
 function startEditing(movie) {
     editingId = movie.id;
+    editingAddedAt = Number(movie.addedAt) || 0;
     fillForm(movie);
     cancelButton.hidden = false;
     message(formMessage, "", "");
@@ -543,6 +546,10 @@ movieForm.addEventListener("submit", async event => {
             return;
         }
     }
+
+    // "addedAt" decides the order of "Newest": new movies go to the top.
+    if (!editingId || $("f-bump").checked) data.addedAt = Date.now();
+    else if (editingAddedAt) data.addedAt = editingAddedAt;
 
     saveButton.disabled = true;
     message(formMessage, "Saving...", "");
