@@ -25,6 +25,13 @@
 {"@context":"https://schema.org","@type":"WebSite","name":"New Hit Movies","url":"https://newhitmovie.store/"}
 </script>
 
+<!-- Speed: open connections early and start downloading the scripts sooner -->
+<link rel="preconnect" href="https://media.newhitmovie.store">
+<link rel="preconnect" href="https://firestore.googleapis.com">
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="modulepreload" href="firebase-config.js">
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js">
+
 <link rel="icon" href="logo.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="stylesheet" href="style.css">
@@ -41,6 +48,17 @@
 <button type="button" data-lang="en" aria-pressed="true" title="English">EN</button>
 <button type="button" data-lang="rw" aria-pressed="false" title="Kinyarwanda">RW</button>
 </div>
+
+<div id="search-panel" class="search-panel" role="search" hidden>
+<div class="search-field">
+<svg class="search-icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 16l4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+<input id="search" type="search" placeholder="Search movies and series" aria-label="Search movies and series" autocomplete="off" enterkeyhint="search">
+<button id="search-clear" class="search-clear" type="button" aria-label="Clear search">✕</button>
+</div>
+<div id="search-suggest" class="search-suggest" hidden></div>
+</div>
+
+<button id="search-toggle" class="search-toggle" type="button" aria-expanded="false" aria-controls="search-panel" aria-label="Search"><svg class="icon-search" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M16 16l4.5 4.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg><svg class="icon-x" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg></button>
 
 <button id="menu-toggle" class="menu-toggle" type="button" aria-expanded="false" aria-controls="main-nav" aria-label="Menu">&#9776;</button>
 
@@ -64,6 +82,8 @@
 <!-- HOME VIEW -->
 <div id="home-view">
 
+<section id="featured" data-no-i18n class="featured" aria-label="Featured titles"></section>
+
 <nav class="chips" aria-label="Quick categories">
 <a href="#all">🔥 New</a>
 <a href="#movies">🎬 Movies</a>
@@ -73,17 +93,11 @@
 <a href="request.html">➕ Request</a>
 </nav>
 
-<section id="featured" data-no-i18n class="featured" aria-label="Featured titles" hidden></section>
-
-
 
 <div id="rows" data-no-i18n class="rows"></div>
 
 <section class="browse" id="browse">
 <div class="controls">
-<label class="sr-only" for="search">Search movies</label>
-<input id="search" type="search" placeholder="Search movies and series" autocomplete="off">
-
 <label class="sr-only" for="type">Filter by type</label>
 <select id="type">
 <option value="all">Movies and series</option>

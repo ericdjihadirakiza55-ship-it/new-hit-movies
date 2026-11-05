@@ -39,11 +39,11 @@ const requestCount = $("req-count");
 const TEXT_FIELDS = [
     "title", "genre", "releaseDate", "director", "cast",
     "description", "posterUrl", "watchUrl", "downloadUrl", "trailerUrl",
-    "interpreter"
+    "interpreter", "interpreterPhotoUrl"
 ];
 const BOOL_FIELDS = ["interpreted", "subtitled", "featured"];
 const NUMBER_FIELDS = ["year", "rating", "runtime"];
-const URL_FIELDS = ["posterUrl", "watchUrl", "downloadUrl", "trailerUrl"];
+const URL_FIELDS = ["posterUrl", "watchUrl", "downloadUrl", "trailerUrl", "interpreterPhotoUrl"];
 
 let movies = [];
 let editingId = null;
@@ -237,7 +237,10 @@ function readForm() {
         data[name] = $("f-" + name).checked;
     }
 
-    if (!data.interpreted) delete data.interpreter;
+    if (!data.interpreted) {
+        delete data.interpreter;
+        delete data.interpreterPhotoUrl;
+    }
 
     return data;
 }

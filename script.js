@@ -263,7 +263,15 @@ function createPoster(movie, priority = false) {
 // "🎙 VJ Name" line, shown on cards and slides of interpreted titles.
 function interpreterLine(movie) {
     if (movie.interpreted !== true || !movie.interpreter) return null;
-    return el("p", { class: "interpreter", text: "🎙 " + movie.interpreter });
+    const photo = safeUrl(movie.interpreterPhotoUrl);
+    if (!photo) return el("p", { class: "interpreter", text: "🎙 " + movie.interpreter });
+
+    return el(
+        "p",
+        { class: "interpreter interpreter-photo" },
+        el("img", { src: photo, alt: "", width: 20, height: 20, loading: "lazy", decoding: "async" }),
+        movie.interpreter
+    );
 }
 
 function createCard(movie) {
@@ -447,58 +455,7 @@ function pickFeatured() {
     return chosen;
 }
 
-function createSlide(movie, index, total) {
-    const description = movie.description || "";
-    const shortText =
-        description.length > 200 ? description.slice(0, 197) + "..." : description;
-
-    const actions = el("div", { class: "details-actions" });
-    actions.appendChild(
-        el("a", {
-            class: "btn",
-            href: "#movie=" + encodeURIComponent(movie.id),
-            text: t("View details")
-        })
-    );
-
-    const background = el("div", { class: "slide-bg", "aria-hidden": "true" });
-    const posterUrl = safeUrl(movie.posterUrl);
-    if (posterUrl) background.style.backgroundImage = 'url("' + posterUrl + '")';
-
-    const poster = createPoster(movie);
-    const posterImg = poster.querySelector("img");
-    if (posterImg && index === 0) posterImg.loading = "eager";
-
-    const badges = getBadges(movie);
-
-    return el(
-        "article",
-        {
-            class: "slide",
-            role: "group",
-            "aria-roledescription": "slide",
-            "aria-label": t("{i} of {n}", { i: index + 1, n: total })
-        },
-        background,
-        el(
-            "div",
-            { class: "featured-inner" },
-            poster,
-            el(
-                "div",
-                { class: "featured-text" },
-                el("p", { class: "featured-label", text: t("Now showing") }),
-                badges.length ? el("div", { class: "slide-tags" }, ...badges) : null,
-                el("h2", { text: movie.title || untitled() }),
-                el("p", { class: "meta", text: movieMeta(movie) }),
-                interpreterLine(movie),
-                shortText ? el("p", { class: "slide-desc", text: shortText }) : null,
-                actions
-            )
-        )
-    );
-}
-
+// One slide of the hero: blurred background + poster card + text.
 function renderFeatured() {
     const picks = pickFeatured();
 
@@ -508,92 +465,229 @@ function renderFeatured() {
     }
 
     const total = picks.length;
-    const slides = picks.map((movie, i) => createSlide(movie, i, total));
-    const track = el("div", { class: "slides" }, ...slides);
-    const slider = el(
-        "div",
-        {
-            class: "slider",
-            role: "region",
-            "aria-roledescription": "carousel",
-            "aria-label": t("Featured titles")
-        },
-        track
-    );
-
     let current = 0;
     const hold = { user: false, hover: false, focus: false };
-    const dots = [];
-
-    function paint() {
-        slides.forEach((slide, i) => slide.classList.toggle("is-active", i === current));
-        dots.forEach((dot, i) => {
-            dot.classList.toggle("is-active", i === current);
-            if (i === current) dot.setAttribute("aria-current", "true");
-            else dot.removeAttribute("aria-current");
-        });
-    }
+    const bgs = [];
+    const cards = [];
+    const infos = [];
+    const segs = [];
 
     function go(index) {
         current = (index + total) % total;
         paint();
     }
 
-    // Only one title: no controls, no movement.
-    if (total > 1) {
-        const prev = el("button", { class: "slider-btn", type: "button", "aria-label": t("Previous slide"), text: "‹" });
-        const next = el("button", { class: "slider-btn", type: "button", "aria-label": t("Next slide"), text: "›" });
-        const pause = el("button", { class: "slider-btn slider-pause", type: "button", "aria-label": t("Pause slideshow"), text: "❚❚" });
-        const dotBox = el("div", { class: "dots" });
+    picks.forEach((movie, i) => {
+        const detailsUrl = "#movie=" + encodeURIComponent(movie.id);
+        const posterUrl = safeUrl(movie.posterUrl);
 
-        picks.forEach((movie, i) => {
-            const dot = el(
+        // Blurred background of the active poster.
+        const bg = el("div", { class: "hero-bg" });
+        if (posterUrl) bg.dataset.src = posterUrl;   // loaded only when this slide is active
+        bgs.push(bg);
+
+        // Poster card (centre card is big, the two neighbours are tilted behind it).
+        const noPoster = () => el("span", { class: "hero-noposter", text: "🎞️" });
+        let face;
+        if (posterUrl) {
+            face = el("img", {
+                src: i === 0 ? posterUrl : null,   // the others load a moment later (see paint)
+                alt: t("{title} poster", { title: movie.title || t("Movie") }),
+                width: 300,
+                height: 450,
+                loading: i === 0 ? "eager" : "lazy",
+                decoding: "async",
+                fetchpriority: i === 0 ? "high" : null
+            });
+            if (i !== 0) face.dataset.src = posterUrl;
+            face.addEventListener("error", () => face.replaceWith(noPoster()));
+        } else {
+            face = noPoster();
+        }
+
+        const card = el(
+            "a",
+            { class: "hero-card", href: detailsUrl, "aria-label": movie.title || untitled() },
+            face
+        );
+        // Tapping a side card brings it to the centre; tapping the centre card opens it.
+        card.addEventListener("click", event => {
+            if (i !== current) {
+                event.preventDefault();
+                go(i);
+            }
+        });
+        cards.push(card);
+
+        // Text block.
+        const tags = [];
+        if (movie.featured === true) tags.push([t("Featured"), "hero-tag-red"]);
+        const genre = genreLabel(movie.genre);
+        if (genre) tags.push([genre, "hero-tag-grey"]);
+        if (isSeries(movie)) tags.push([t("Series"), "hero-tag-gold"]);
+        if (movie.interpreted === true) tags.push([t("Interpreted|one"), "hero-tag-gold"]);
+        if (movie.subtitled === true) tags.push([t("Subtitles"), "hero-tag-gold"]);
+
+        const description = movie.description || "";
+        const shortText = description.length > 220 ? description.slice(0, 217) + "..." : description;
+
+        const trailerId = getYouTubeId(movie.trailerUrl);
+        const actions = el(
+            "div",
+            { class: "hero-actions" },
+            el(
+                "a",
+                { class: "hero-btn hero-btn-main", href: detailsUrl },
+                el("span", { class: "hero-play", "aria-hidden": "true", text: "▶" }),
+                t("Watch Now")
+            ),
+            trailerId
+                ? el("a", {
+                      class: "hero-btn",
+                      href: "https://www.youtube.com/watch?v=" + encodeURIComponent(trailerId),
+                      target: "_blank",
+                      rel: "noopener noreferrer",
+                      text: t("Trailer")
+                  })
+                : null
+        );
+
+        const vj =
+            movie.interpreted === true && movie.interpreter
+                ? el(
+                      "div",
+                      { class: "hero-vj" },
+                      safeUrl(movie.interpreterPhotoUrl)
+                          ? el("img", {
+                                class: "hero-vj-avatar",
+                                src: safeUrl(movie.interpreterPhotoUrl),
+                                alt: "",
+                                width: 34,
+                                height: 34,
+                                loading: "lazy",
+                                decoding: "async"
+                            })
+                          : el("span", {
+                                class: "hero-vj-avatar",
+                                "aria-hidden": "true",
+                                text: String(movie.interpreter).trim().charAt(0).toUpperCase()
+                            }),
+                      el("span", { text: movie.interpreter })
+                  )
+                : null;
+
+        infos.push(
+            el(
+                "div",
+                {
+                    class: "hero-info",
+                    role: "group",
+                    "aria-roledescription": "slide",
+                    "aria-label": t("{i} of {n}", { i: i + 1, n: total })
+                },
+                tags.length
+                    ? el(
+                          "div",
+                          { class: "hero-tags" },
+                          ...tags.map(([text, cls]) => el("span", { class: "hero-tag " + cls, text }))
+                      )
+                    : null,
+                el("h2", { text: movie.title || untitled() }),
+                el("p", { class: "hero-meta", text: movieMeta(movie) }),
+                vj,
+                shortText ? el("p", { class: "hero-desc", text: shortText }) : null,
+                actions
+            )
+        );
+
+        // Progress bar segment: it fills while the slide shows, then moves on.
+        if (total > 1) {
+            const seg = el(
                 "button",
                 {
-                    class: "dot",
+                    class: "hero-seg",
                     type: "button",
                     "aria-label": t("Show slide {n}: {title}", { n: i + 1, title: movie.title || untitled() })
                 },
                 el("i")
             );
-            dot.addEventListener("click", () => go(i));
-            dots.push(dot);
-            dotBox.appendChild(dot);
+            seg.addEventListener("click", () => go(i));
+            segs.push(seg);
+        }
+    });
+
+    const progress = total > 1 ? el("div", { class: "hero-progress" }, ...segs) : null;
+
+    const stage = el("div", { class: "hero-stage" }, ...cards);
+    const hero = el(
+        "div",
+        {
+            class: "hero",
+            role: "region",
+            "aria-roledescription": "carousel",
+            "aria-label": t("Featured titles")
+        },
+        el("div", { class: "hero-bgs", "aria-hidden": "true" }, ...bgs),
+        stage,
+        el("div", { class: "hero-infos" }, ...infos),
+        progress
+    );
+
+    // Load images only when needed, so the first poster is not slowed down by the others.
+    let sidesReady = false;
+    function loadImages(i, pos) {
+        const face = cards[i].firstElementChild;
+        if (face && face.dataset && face.dataset.src && (pos === "0" || (sidesReady && (pos === "1" || pos === "-1")))) {
+            face.src = face.dataset.src;
+            delete face.dataset.src;
+        }
+        if (i === current && bgs[i].dataset.src) {
+            bgs[i].style.backgroundImage = 'url("' + bgs[i].dataset.src + '")';
+            delete bgs[i].dataset.src;
+        }
+    }
+
+    function paint() {
+        picks.forEach((_, i) => {
+            let d = i - current;
+            if (d > total / 2) d -= total;
+            if (d < -total / 2) d += total;
+            const pos = d === 0 ? "0" : d === 1 ? "1" : d === -1 ? "-1" : "x";
+
+            cards[i].dataset.pos = pos;
+            cards[i].tabIndex = pos === "x" ? -1 : 0;
+            loadImages(i, pos);
+            bgs[i].classList.toggle("is-active", i === current);
+            infos[i].classList.toggle("is-active", i === current);
+            infos[i].setAttribute("aria-hidden", i === current ? "false" : "true");
+
+            if (segs[i]) {
+                segs[i].classList.toggle("is-active", i === current);
+                segs[i].classList.toggle("is-done", i < current);
+            }
         });
+    }
 
-        const bar = el("div", { class: "slider-bar" }, prev, dotBox, pause, next);
-        slider.appendChild(bar);
-
+    if (total > 1) {
         const syncPause = () => {
-            slider.classList.toggle("is-paused", hold.user || hold.hover || hold.focus);
+            hero.classList.toggle("is-paused", hold.user || hold.hover || hold.focus);
         };
 
-        prev.addEventListener("click", () => go(current - 1));
-        next.addEventListener("click", () => go(current + 1));
-
-        pause.addEventListener("click", () => {
-            hold.user = !hold.user;
-            pause.textContent = hold.user ? "▶" : "❚❚";
-            pause.setAttribute("aria-label", t(hold.user ? "Play slideshow" : "Pause slideshow"));
-            syncPause();
+        // The filling bar is the timer: when it ends, go to the next slide.
+        progress.addEventListener("animationend", event => {
+            if (event.animationName === "herofill") go(current + 1);
         });
 
-        // The filling bar on the active dot is the timer: when it ends, go to the next slide.
-        bar.addEventListener("animationend", event => {
-            if (event.animationName === "dotfill") go(current + 1);
-        });
-
-        // Pause while a mouse is over the banner, or while keyboard focus is inside it.
         if (window.matchMedia("(hover: hover)").matches) {
-            slider.addEventListener("mouseenter", () => { hold.hover = true; syncPause(); });
-            slider.addEventListener("mouseleave", () => { hold.hover = false; syncPause(); });
+            hero.addEventListener("mouseenter", () => { hold.hover = true; syncPause(); });
+            hero.addEventListener("mouseleave", () => { hold.hover = false; syncPause(); });
         }
-        slider.addEventListener("focusin", event => {
+        hero.addEventListener("focusin", event => {
             if (event.target.matches(":focus-visible")) { hold.focus = true; syncPause(); }
         });
-        slider.addEventListener("focusout", () => { hold.focus = false; syncPause(); });
+        hero.addEventListener("focusout", () => { hold.focus = false; syncPause(); });
 
-        slider.addEventListener("keydown", event => {
+        hero.addEventListener("keydown", event => {
             if (event.key === "ArrowLeft") go(current - 1);
             if (event.key === "ArrowRight") go(current + 1);
         });
@@ -601,24 +695,31 @@ function renderFeatured() {
         // Swipe on phones.
         let startX = null;
         let startY = 0;
-        track.addEventListener("touchstart", event => {
+        stage.addEventListener("touchstart", event => {
             startX = event.touches[0].clientX;
             startY = event.touches[0].clientY;
+            hold.user = true;
+            syncPause();
         }, { passive: true });
-        track.addEventListener("touchend", event => {
+        stage.addEventListener("touchend", event => {
+            hold.user = false;
+            syncPause();
             if (startX === null) return;
             const dx = event.changedTouches[0].clientX - startX;
             const dy = event.changedTouches[0].clientY - startY;
             startX = null;
-            if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+            if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.3) {
                 go(current + (dx < 0 ? 1 : -1));
             }
         }, { passive: true });
     }
 
     paint();
-    els.featured.replaceChildren(slider);
+    els.featured.replaceChildren(hero);
     els.featured.hidden = false;
+
+    // Side posters load right after the first one has had time to show.
+    setTimeout(() => { sidesReady = true; paint(); }, 800);
 }
 
 /* ---------- Details page ---------- */
@@ -940,6 +1041,122 @@ window.addEventListener(
 
 /* ---------- Events ---------- */
 
+// Search lives in the header: icon -> search bar with live suggestions.
+const siteHeader = document.querySelector(".site-header");
+const searchToggle = $("search-toggle");
+const searchPanel = $("search-panel");
+const searchClear = $("search-clear");
+const searchSuggest = $("search-suggest");
+const SUGGEST_COUNT = 5;
+
+function hideSuggest() {
+    searchSuggest.hidden = true;
+    searchSuggest.replaceChildren();
+}
+
+function openSearch() {
+    searchPanel.hidden = false;
+    siteHeader.classList.add("searching");
+    searchToggle.setAttribute("aria-expanded", "true");
+    searchToggle.setAttribute("aria-label", t("Close search"));
+    els.search.focus();
+}
+
+function resetSearchResults() {
+    els.search.value = "";
+    state.query = "";
+    state.shown = PAGE_SIZE;
+    renderList();
+}
+
+function closeSearch() {
+    searchPanel.hidden = true;
+    siteHeader.classList.remove("searching");
+    searchToggle.setAttribute("aria-expanded", "false");
+    searchToggle.setAttribute("aria-label", t("Search"));
+    hideSuggest();
+    if (els.search.value) resetSearchResults();
+}
+
+// Show all matches in the movie list below the banner.
+function showSearchResults() {
+    hideSuggest();
+    state.type = "all";
+    state.version = "all";
+    state.genre = "all";
+    els.type.value = "all";
+    els.version.value = "all";
+    els.genre.value = "all";
+    state.shown = PAGE_SIZE;
+    renderList();
+
+    const scroll = () => $("browse").scrollIntoView({ behavior: "smooth", block: "start" });
+    if (location.hash.startsWith("#movie=")) {
+        location.hash = "#all";
+        setTimeout(scroll, 150);
+    } else {
+        scroll();
+    }
+}
+
+function showSuggestions() {
+    const query = els.search.value.trim().toLowerCase();
+    hideSuggest();
+    if (!query || !state.loaded) return;
+
+    const matches = state.movies
+        .filter(movie => (movie.title || "").toLowerCase().includes(query))
+        .sort(SORTERS.newest);
+
+    const items = matches.slice(0, SUGGEST_COUNT).map(movie => {
+        const poster = safeUrl(movie.posterUrl);
+        const thumb = poster
+            ? el("img", { src: poster, alt: "", width: 52, height: 78, loading: "lazy", decoding: "async" })
+            : el("span", { class: "suggest-noposter", text: "🎞️" });
+        const link = el(
+            "a",
+            { class: "suggest-item", href: "#movie=" + encodeURIComponent(movie.id) },
+            thumb,
+            el("span", { class: "suggest-title", text: movie.title || untitled() })
+        );
+        link.addEventListener("click", closeSearch);
+        return link;
+    });
+
+    if (!items.length) {
+        searchSuggest.append(el("p", { class: "suggest-empty", text: t("No movies match your search.") }));
+    } else {
+        searchSuggest.append(...items);
+        const all = el("button", {
+            class: "suggest-all",
+            type: "button",
+            text: t("View all results") + " →"
+        });
+        all.addEventListener("click", showSearchResults);
+        searchSuggest.append(all);
+    }
+    searchSuggest.hidden = false;
+}
+
+searchToggle.addEventListener("click", () => {
+    if (searchPanel.hidden) openSearch();
+    else closeSearch();
+});
+
+searchClear.addEventListener("click", () => {
+    resetSearchResults();
+    hideSuggest();
+    els.search.focus();
+});
+
+els.search.addEventListener("keydown", event => {
+    if (event.key === "Escape") closeSearch();
+    if (event.key === "Enter") {
+        event.preventDefault();
+        if (els.search.value.trim()) showSearchResults();
+    }
+});
+
 let searchTimer;
 els.search.addEventListener("input", () => {
     clearTimeout(searchTimer);
@@ -947,6 +1164,7 @@ els.search.addEventListener("input", () => {
         state.query = els.search.value.trim();
         state.shown = PAGE_SIZE;
         renderList();
+        showSuggestions();
     }, 150);
 });
 
