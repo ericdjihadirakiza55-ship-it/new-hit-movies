@@ -97,41 +97,6 @@ function dlUrl(value) {
     return url.href;
 }
 
-// Detect Google Drive file links and extract their file ID.
-function googleDriveFileId(value) {
-    const href = safeUrl(value);
-    if (!href) return null;
-
-    const url = new URL(href);
-    if (url.hostname !== "drive.google.com") return null;
-
-    const match = url.pathname.match(/^\/file\/d\/([^/]+)/);
-    const id = match ? match[1] : url.searchParams.get("id");
-    return id && /^[\w-]+$/.test(id) ? id : null;
-}
-
-// Google Drive uses its preview page for watching. Other providers keep their URL.
-function watchLink(value) {
-    const href = safeUrl(value);
-    if (!href) return null;
-
-    const id = googleDriveFileId(href);
-    return id
-        ? "https://drive.google.com/file/d/" + encodeURIComponent(id) + "/preview"
-        : href;
-}
-
-// Google Drive's file page offers a Download option; R2 keeps its existing ?dl=1 behavior.
-function downloadLink(value) {
-    const href = safeUrl(value);
-    if (!href) return null;
-
-    const id = googleDriveFileId(href);
-    return id
-        ? "https://drive.google.com/file/d/" + encodeURIComponent(id) + "/view"
-        : dlUrl(href);
-}
-
 // One place to turn any YouTube link into a video ID.
 function getYouTubeId(value) {
     const href = safeUrl(value);
@@ -187,14 +152,14 @@ function createParts(movie) {
         const number = part.number || i + 1;
         const buttons = el("div", { class: "episode-buttons" });
 
-        const watch = watchLink(part.watchUrl);
+        const watch = safeUrl(part.watchUrl);
         if (watch) {
             buttons.appendChild(
                 el("a", { class: "btn", href: watch, target: "_blank", rel: "noopener noreferrer", text: t("Watch") })
             );
         }
 
-        const download = downloadLink(part.downloadUrl);
+        const download = dlUrl(part.downloadUrl);
         if (download) {
             buttons.appendChild(el("a", { class: "btn btn-secondary", href: download, text: t("Download") }));
         }
@@ -337,8 +302,14 @@ function dateKey(movie) {
     return movie.releaseDate || (movie.year ? String(movie.year) : "");
 }
 
+// When the movie was added to the site (set by the admin page). Older entries have none.
+function addedKey(movie) {
+    return Number(movie.addedAt) || 0;
+}
+
 const SORTERS = {
-    newest: (a, b) => dateKey(b).localeCompare(dateKey(a)),
+    newest: (a, b) =>
+        addedKey(b) - addedKey(a) || dateKey(b).localeCompare(dateKey(a)),
     oldest: (a, b) =>
         (dateKey(a) || "9999").localeCompare(dateKey(b) || "9999"),
     rating: (a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0),
@@ -685,7 +656,7 @@ function createEpisodeList(season) {
     const items = episodes.map(ep => {
         const buttons = el("div", { class: "episode-buttons" });
 
-        const watch = watchLink(ep.watchUrl);
+        const watch = safeUrl(ep.watchUrl);
         if (watch) {
             buttons.appendChild(
                 el("a", {
@@ -698,7 +669,7 @@ function createEpisodeList(season) {
             );
         }
 
-        const download = downloadLink(ep.downloadUrl);
+        const download = dlUrl(ep.downloadUrl);
         if (download) {
             buttons.appendChild(
                 el("a", {
@@ -793,7 +764,7 @@ function showMovieDetails(movie) {
     // Action buttons.
     const actions = el("div", { class: "details-actions" });
 
-    const watchUrl = watchLink(movie.watchUrl);
+    const watchUrl = safeUrl(movie.watchUrl);
     if (watchUrl) {
         actions.appendChild(
             el("a", {
@@ -806,7 +777,7 @@ function showMovieDetails(movie) {
         );
     }
 
-    const downloadUrl = downloadLink(movie.downloadUrl);
+    const downloadUrl = dlUrl(movie.downloadUrl);
     if (downloadUrl) {
         actions.appendChild(
             el("a", {
