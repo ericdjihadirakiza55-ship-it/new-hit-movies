@@ -466,6 +466,13 @@ function renderFeatured() {
 
     const total = picks.length;
     let current = 0;
+
+    // Next visit: index.html reads this and starts downloading the poster immediately.
+    try {
+        const first = safeUrl(picks[0].posterUrl);
+        if (first) localStorage.setItem("nhm-hero-poster", first);
+    } catch {}
+
     const hold = { user: false, hover: false, focus: false };
     const bgs = [];
     const cards = [];
@@ -483,7 +490,7 @@ function renderFeatured() {
 
         // Blurred background of the active poster.
         const bg = el("div", { class: "hero-bg" });
-        if (posterUrl) bg.dataset.src = posterUrl;   // loaded only when this slide is active
+        if (posterUrl) bg.dataset.src = posterUrl;
         bgs.push(bg);
 
         // Poster card (centre card is big, the two neighbours are tilted behind it).

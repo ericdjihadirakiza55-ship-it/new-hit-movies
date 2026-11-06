@@ -25,6 +25,11 @@
 {"@context":"https://schema.org","@type":"WebSite","name":"New Hit Movies","url":"https://newhitmovie.store/"}
 </script>
 
+<!-- Speed: if we know the first banner poster from the last visit, start downloading it right away -->
+<script>
+try{var u=localStorage.getItem("nhm-hero-poster");if(u&&u.indexOf("https://media.newhitmovie.store/")===0){var l=document.createElement("link");l.rel="preload";l.as="image";l.href=u;l.setAttribute("fetchpriority","high");document.head.appendChild(l);}}catch(e){}
+</script>
+
 <!-- Speed: open connections early and start downloading the scripts sooner -->
 <link rel="preconnect" href="https://media.newhitmovie.store">
 <link rel="preconnect" href="https://firestore.googleapis.com">
