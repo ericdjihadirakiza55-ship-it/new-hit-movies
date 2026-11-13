@@ -101,6 +101,13 @@
 </select>
 </label>
 
+<label class="field"><span>Video hosting</span>
+<select id="f-hosting">
+<option value="r2">R2 (my own storage, default)</option>
+<option value="wistia">Wistia</option>
+</select>
+</label>
+
 <label class="field"><span>Title *</span>
 <input id="f-title" type="text" required>
 </label>
@@ -167,6 +174,7 @@
 <!-- Movie with parts -->
 <div id="parts-box" hidden>
 <h3>Parts</h3>
+<p class="wistia-hint" hidden>Wistia is selected: in each line, write the Wistia Media ID in the 3rd column instead of a watch link. The 4th column (download) stays a normal https link and is optional.</p>
 <label class="field"><span>One part per line: number | title | watch link | download link</span>
 <textarea id="f-parts" placeholder="1 | Part 1 | https://watch-link | https://download-link&#10;2 | Part 2 | https://watch-link | https://download-link"></textarea>
 </label>
@@ -174,6 +182,7 @@
 
 <div id="seasons-box" hidden>
 <h3>Seasons</h3>
+<p class="wistia-hint" hidden>Wistia is selected: in each episode line, write the Wistia Media ID in the 3rd column instead of a watch link. The 4th column (download) stays a normal https link and is optional.</p>
 <div id="seasons-list"></div>
 <p><button id="add-season" class="btn btn-secondary" type="button">+ Add season</button></p>
 </div>
@@ -182,13 +191,18 @@
 <input id="f-posterUrl" type="url" placeholder="https://">
 </label>
 
-<label class="field"><span>Watch link (https), for a single-file movie</span>
+<label class="field" id="wistia-field" hidden><span>Wistia Media ID (letters and numbers, not a link)</span>
+<input id="f-wistiaId" type="text" placeholder="e.g. abc123xyz0" autocomplete="off">
+</label>
+
+<label class="field" id="watch-field"><span>Watch link (https), for a single-file movie</span>
 <input id="f-watchUrl" type="url" placeholder="https://">
 </label>
 
 <label class="field"><span>Download link (https), for a single-file movie</span>
 <input id="f-downloadUrl" type="url" placeholder="https://">
 </label>
+<p class="wistia-hint" hidden>Wistia is selected: Watch uses the Media ID above. For Download, paste a direct https link to the video file (from Wistia or from your R2 storage).</p>
 
 <label class="field"><span>YouTube trailer link</span>
 <input id="f-trailerUrl" type="url" placeholder="https://www.youtube.com/watch?v=...">

@@ -88,13 +88,55 @@ function safeUrl(value) {
     }
 }
 
+// ---------- Automatic image resizing ----------
+// Posters and photos on media.newhitmovie.store are served through Cloudflare Image
+// Transformations: resized to the size needed and sent as WebP/AVIF when the phone
+// supports it. If it is not switched on in Cloudflare, the original image is used instead.
+const IMAGE_RESIZE = true; // set to false to turn it off
+const MEDIA_HOST = "https://media.newhitmovie.store/";
+
+function sized(value, width, quality = 75) {
+    const url = safeUrl(value);
+    if (!url || !IMAGE_RESIZE || !url.startsWith(MEDIA_HOST)) return url;
+    return location.origin + "/cdn-cgi/image/width=" + width + ",quality=" + quality + ",format=auto/" + url;
+}
+
+// Small images: if the resized version fails, load the original file once.
+function fallbackToOriginal(img, original) {
+    const onError = () => {
+        img.removeEventListener("error", onError);
+        if (original && img.src !== original) img.src = original;
+    };
+    img.addEventListener("error", onError);
+}
+
 // Adds ?dl=1 so Cloudflare forces a download.
 function dlUrl(value) {
     const u = safeUrl(value);
     if (!u) return null;
+    if (!u.startsWith(MEDIA_HOST)) return u; // only our R2 files use the ?dl=1 rule
     const url = new URL(u);
     url.searchParams.set("dl", "1");
     return url.href;
+}
+
+// ---------- Wistia (second video host) ----------
+// A Wistia video is stored as a Media ID (not a link). Anything that does not look like
+// an ID is ignored, so nothing unexpected can end up inside the player address.
+const WISTIA_ID = /^[A-Za-z0-9]{6,20}$/; // keep in sync with admin.js
+
+function wistiaId(value) {
+    const id = String(value || "").trim();
+    return WISTIA_ID.test(id) ? id : null;
+}
+
+// The details page sets this each time it is drawn; Watch buttons call it.
+let playWistia = () => {};
+
+function wistiaButton(id, label, extraClass = "") {
+    const button = el("button", { class: ("btn " + extraClass).trim(), type: "button", text: label });
+    button.addEventListener("click", () => playWistia(id, label));
+    return button;
 }
 
 // One place to turn any YouTube link into a video ID.
@@ -152,8 +194,11 @@ function createParts(movie) {
         const number = part.number || i + 1;
         const buttons = el("div", { class: "episode-buttons" });
 
+        const partWistia = wistiaId(part.wistiaId);
         const watch = safeUrl(part.watchUrl);
-        if (watch) {
+        if (partWistia) {
+            buttons.appendChild(wistiaButton(partWistia, t("Part {n}", { n: number })));
+        } else if (watch) {
             buttons.appendChild(
                 el("a", { class: "btn", href: watch, target: "_blank", rel: "noopener noreferrer", text: t("Watch") })
             );
@@ -233,6 +278,7 @@ function setPageInfo(title, description) {
 /* ---------- Building blocks ---------- */
 
 function createPoster(movie, priority = false) {
+    const width = priority ? 600 : 400; // details page poster is bigger than a card
     const poster = el("div", { class: "poster" });
     const posterUrl = safeUrl(movie.posterUrl);
 
@@ -241,8 +287,9 @@ function createPoster(movie, priority = false) {
         return poster;
     }
 
+    const resizedSrc = sized(posterUrl, width);
     const img = el("img", {
-        src: posterUrl,
+        src: resizedSrc,
         alt: t("{title} poster", { title: movie.title || t("Movie") }),
         width: 300,
         height: 450,
@@ -251,7 +298,14 @@ function createPoster(movie, priority = false) {
         fetchpriority: priority ? "high" : null
     });
 
+    let retried = false;
     img.addEventListener("error", () => {
+        // First failure: try the original file. Second failure: show the placeholder.
+        if (!retried && resizedSrc !== posterUrl) {
+            retried = true;
+            img.src = posterUrl;
+            return;
+        }
         img.remove();
         poster.textContent = "🎞️";
     });
@@ -269,7 +323,11 @@ function interpreterLine(movie) {
     return el(
         "p",
         { class: "interpreter interpreter-photo" },
-        el("img", { src: photo, alt: "", width: 20, height: 20, loading: "lazy", decoding: "async" }),
+        (() => {
+            const avatar = el("img", { src: sized(photo, 60), alt: "", width: 20, height: 20, loading: "lazy", decoding: "async" });
+            fallbackToOriginal(avatar, photo);
+            return avatar;
+        })(),
         movie.interpreter
     );
 }
@@ -469,7 +527,7 @@ function renderFeatured() {
 
     // Next visit: index.html reads this and starts downloading the poster immediately.
     try {
-        const first = safeUrl(picks[0].posterUrl);
+        const first = sized(picks[0].posterUrl, 520);
         if (first) localStorage.setItem("nhm-hero-poster", first);
     } catch {}
 
@@ -490,15 +548,15 @@ function renderFeatured() {
 
         // Blurred background of the active poster.
         const bg = el("div", { class: "hero-bg" });
-        if (posterUrl) bg.dataset.src = posterUrl;
         bgs.push(bg);
 
         // Poster card (centre card is big, the two neighbours are tilted behind it).
         const noPoster = () => el("span", { class: "hero-noposter", text: "🎞️" });
+        const heroSrc = sized(posterUrl, 520);
         let face;
         if (posterUrl) {
             face = el("img", {
-                src: i === 0 ? posterUrl : null,   // the others load a moment later (see paint)
+                src: i === 0 ? heroSrc : null,   // the others load a moment later (see paint)
                 alt: t("{title} poster", { title: movie.title || t("Movie") }),
                 width: 300,
                 height: 450,
@@ -506,8 +564,15 @@ function renderFeatured() {
                 decoding: "async",
                 fetchpriority: i === 0 ? "high" : null
             });
-            if (i !== 0) face.dataset.src = posterUrl;
-            face.addEventListener("error", () => face.replaceWith(noPoster()));
+            if (i !== 0) face.dataset.src = heroSrc;
+            face.addEventListener("error", () => {
+                if (face.dataset.retry !== "1" && heroSrc !== posterUrl) {
+                    face.dataset.retry = "1";
+                    face.src = posterUrl; // resized version failed: use the original
+                } else {
+                    face.replaceWith(noPoster());
+                }
+            });
         } else {
             face = noPoster();
         }
@@ -565,15 +630,19 @@ function renderFeatured() {
                       "div",
                       { class: "hero-vj" },
                       safeUrl(movie.interpreterPhotoUrl)
-                          ? el("img", {
-                                class: "hero-vj-avatar",
-                                src: safeUrl(movie.interpreterPhotoUrl),
-                                alt: "",
-                                width: 34,
-                                height: 34,
-                                loading: "lazy",
-                                decoding: "async"
-                            })
+                          ? (() => {
+                                const avatar = el("img", {
+                                    class: "hero-vj-avatar",
+                                    src: sized(movie.interpreterPhotoUrl, 100),
+                                    alt: "",
+                                    width: 34,
+                                    height: 34,
+                                    loading: "lazy",
+                                    decoding: "async"
+                                });
+                                fallbackToOriginal(avatar, safeUrl(movie.interpreterPhotoUrl));
+                                return avatar;
+                            })()
                           : el("span", {
                                 class: "hero-vj-avatar",
                                 "aria-hidden": "true",
@@ -766,8 +835,13 @@ function createEpisodeList(season) {
     const items = episodes.map(ep => {
         const buttons = el("div", { class: "episode-buttons" });
 
+        const epWistia = wistiaId(ep.wistiaId);
         const watch = safeUrl(ep.watchUrl);
-        if (watch) {
+        if (epWistia) {
+            buttons.appendChild(
+                wistiaButton(epWistia, t("Season {s} · Episode {n}", { s: season.number, n: ep.number }))
+            );
+        } else if (watch) {
             buttons.appendChild(
                 el("a", {
                     class: "btn",
@@ -803,7 +877,23 @@ function createEpisodeList(season) {
         );
     });
 
-    return el("ul", { class: "episode-list" }, ...items);
+    // Long seasons: show 30 episodes first, the rest on request (keeps taps fast on slow phones).
+    const PAGE = 30;
+    const list = el("ul", { class: "episode-list" }, ...items.slice(0, PAGE));
+    if (items.length <= PAGE) return list;
+
+    let shown = PAGE;
+    const more = el("button", { class: "btn btn-secondary episodes-more", type: "button" });
+    const label = () => t("Show more episodes") + " (" + (items.length - shown) + ")";
+    more.textContent = label();
+    more.addEventListener("click", () => {
+        const next = items.slice(shown, shown + PAGE);
+        list.append(...next);
+        shown += next.length;
+        if (shown >= items.length) more.remove();
+        else more.textContent = label();
+    });
+    return el("div", {}, list, more);
 }
 
 function createSeasons(movie) {
@@ -871,11 +961,35 @@ function showMovieDetails(movie) {
           )
         : null;
 
+    // Wistia player area (hidden until a Wistia Watch button is tapped).
+    const stage = el("section", { class: "wistia-stage", hidden: true });
+    playWistia = (id, label) => {
+        stage.replaceChildren(
+            el("h2", { text: label === watchLabel(movie) ? title : title + " · " + label }),
+            el(
+                "div",
+                { class: "wistia-frame" },
+                el("iframe", {
+                    src: "https://fast.wistia.net/embed/iframe/" + encodeURIComponent(id) + "?autoPlay=true",
+                    title: title + " · " + label,
+                    allow: "autoplay; fullscreen; picture-in-picture",
+                    allowfullscreen: true,
+                    referrerpolicy: "strict-origin-when-cross-origin"
+                })
+            )
+        );
+        stage.hidden = false;
+        stage.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+
     // Action buttons.
     const actions = el("div", { class: "details-actions" });
 
+    const movieWistia = wistiaId(movie.wistiaId);
     const watchUrl = safeUrl(movie.watchUrl);
-    if (watchUrl) {
+    if (movieWistia) {
+        actions.appendChild(wistiaButton(movieWistia, watchLabel(movie)));
+    } else if (watchUrl) {
         actions.appendChild(
             el("a", {
                 class: "btn",
@@ -936,6 +1050,7 @@ function showMovieDetails(movie) {
                 actions
             )
         ),
+        stage,
         createSeasons(movie),
         createParts(movie),
         trailer,
@@ -1118,7 +1233,11 @@ function showSuggestions() {
     const items = matches.slice(0, SUGGEST_COUNT).map(movie => {
         const poster = safeUrl(movie.posterUrl);
         const thumb = poster
-            ? el("img", { src: poster, alt: "", width: 52, height: 78, loading: "lazy", decoding: "async" })
+            ? (() => {
+                  const thumbImg = el("img", { src: sized(poster, 120), alt: "", width: 52, height: 78, loading: "lazy", decoding: "async" });
+                  fallbackToOriginal(thumbImg, poster);
+                  return thumbImg;
+              })()
             : el("span", { class: "suggest-noposter", text: "🎞️" });
         const link = el(
             "a",

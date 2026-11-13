@@ -29,6 +29,34 @@ const saveButton = $("save");
 const cancelButton = $("cancel");
 const adminList = $("admin-list");
 const typeSelect = $("f-type");
+const hostingSelect = $("f-hosting");
+
+// A Wistia Media ID: letters and numbers only (keep in sync with script.js).
+const WISTIA_ID = /^[A-Za-z0-9]{6,20}$/;
+const isWistia = () => hostingSelect.value === "wistia";
+
+// Puts the watch value on a movie, part or episode: a link for R2, a Media ID for Wistia.
+// Returns an error text, or null when everything is fine.
+function setWatch(item, value) {
+    if (!value) return null;
+    if (isWistia()) {
+        if (!WISTIA_ID.test(value)) {
+            return "the Wistia Media ID looks wrong (letters and numbers only, no spaces or links).";
+        }
+        item.wistiaId = value;
+        return null;
+    }
+    if (!isHttps(value)) return "links must start with https://";
+    item.watchUrl = value;
+    return null;
+}
+
+function updateHostingUI() {
+    const wistia = isWistia();
+    $("wistia-field").hidden = !(wistia && typeSelect.value === "movie");
+    $("watch-field").hidden = wistia;
+    for (const hint of document.querySelectorAll(".wistia-hint")) hint.hidden = !wistia;
+}
 const seasonsBox = $("seasons-box");
 const seasonsList = $("seasons-list");
 const partsBox = $("parts-box");
@@ -39,7 +67,7 @@ const requestCount = $("req-count");
 const TEXT_FIELDS = [
     "title", "genre", "releaseDate", "director", "cast",
     "description", "posterUrl", "watchUrl", "downloadUrl", "trailerUrl",
-    "interpreter", "interpreterPhotoUrl"
+    "interpreter", "interpreterPhotoUrl", "wistiaId"
 ];
 const BOOL_FIELDS = ["interpreted", "subtitled", "featured"];
 const NUMBER_FIELDS = ["year", "rating", "runtime"];
@@ -84,17 +112,18 @@ function updateTypeUI() {
     const word = series ? "series" : "movie";
     formTitle.textContent = (editingId ? "Edit " : "Add a ") + word;
     saveButton.textContent = editingId ? "Save changes" : "Save " + word;
+    updateHostingUI();
 }
 
 function episodesToText(list) {
     return (list || [])
-        .map(e => [e.number, e.title || "", e.watchUrl || "", e.downloadUrl || ""].join(" | "))
+        .map(e => [e.number, e.title || "", e.wistiaId || e.watchUrl || "", e.downloadUrl || ""].join(" | "))
         .join("\n");
 }
 
 function partsToText(list) {
     return (list || [])
-        .map(p => [p.number, p.title || "", p.watchUrl || "", p.downloadUrl || ""].join(" | "))
+        .map(p => [p.number, p.title || "", p.wistiaId || p.watchUrl || "", p.downloadUrl || ""].join(" | "))
         .join("\n");
 }
 
@@ -117,12 +146,12 @@ function readParts() {
         const part = { number: n };
         if (title) part.title = title;
 
-        for (const [value, key] of [[watch, "watchUrl"], [download, "downloadUrl"]]) {
-            if (!value) continue;
-            if (!isHttps(value)) {
-                return { error: "Part " + n + ": links must start with https://" };
-            }
-            part[key] = value;
+        const watchError = setWatch(part, watch);
+        if (watchError) return { error: "Part " + n + ": " + watchError };
+
+        if (download) {
+            if (!isHttps(download)) return { error: "Part " + n + ": the download link must start with https://" };
+            part.downloadUrl = download;
         }
         parts.push(part);
     }
@@ -194,12 +223,14 @@ function readSeasons() {
             const episode = { number: n };
             if (title) episode.title = title;
 
-            for (const [value, key] of [[watch, "watchUrl"], [download, "downloadUrl"]]) {
-                if (!value) continue;
-                if (!isHttps(value)) {
-                    return { error: "Season " + number + ", episode " + n + ": links must start with https://" };
+            const watchError = setWatch(episode, watch);
+            if (watchError) return { error: "Season " + number + ", episode " + n + ": " + watchError };
+
+            if (download) {
+                if (!isHttps(download)) {
+                    return { error: "Season " + number + ", episode " + n + ": the download link must start with https://" };
                 }
-                episode[key] = value;
+                episode.downloadUrl = download;
             }
             episodeList.push(episode);
         }
@@ -211,6 +242,8 @@ function readSeasons() {
     if (!seasons.length) return { error: "Add at least one season." };
     return { seasons: seasons.sort((a, b) => a.number - b.number) };
 }
+
+hostingSelect.addEventListener("change", updateHostingUI);
 
 typeSelect.addEventListener("change", () => {
     if (typeSelect.value === "series" && !seasonsList.children.length) addSeasonRow();
@@ -252,6 +285,7 @@ function fillForm(movie) {
             : Array.isArray(movie.parts) && movie.parts.length
               ? "parts"
               : "movie";
+    hostingSelect.value = movie.hosting === "wistia" ? "wistia" : "r2";
     partsText.value = partsToText(movie.parts);
     seasonsList.replaceChildren();
     (movie.seasons || []).forEach(season => addSeasonRow(season));
@@ -542,6 +576,23 @@ movieForm.addEventListener("submit", async event => {
     } else {
         data.type = "movie";
     }
+
+    // Hosting: "r2" (default) uses links, "wistia" uses Media IDs.
+    data.hosting = isWistia() ? "wistia" : "r2";
+    if (isWistia()) {
+        delete data.watchUrl; // Wistia titles use the Media ID instead of a watch link
+        if (typeSelect.value === "movie") {
+            if (!data.wistiaId) {
+                message(formMessage, "Enter the Wistia Media ID.", "error");
+                return;
+            }
+            if (!WISTIA_ID.test(data.wistiaId)) {
+                message(formMessage, "The Wistia Media ID looks wrong (letters and numbers only).", "error");
+                return;
+            }
+        }
+    }
+    if (!isWistia() || typeSelect.value !== "movie") delete data.wistiaId;
 
     for (const name of URL_FIELDS) {
         if (data[name] && !isHttps(data[name])) {
