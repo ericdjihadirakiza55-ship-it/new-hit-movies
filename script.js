@@ -120,7 +120,7 @@ function dlUrl(value) {
     return url.href;
 }
 
-// ---------- Wistia and MEGA (other video hosts) ----------
+// ---------- Wistia, MEGA and Files.fm (other video hosts) ----------
 // Videos on these hosts are stored as an ID (Wistia) or "ID#KEY" (MEGA), never as a free link.
 // Anything that does not look right is ignored, so nothing unexpected can end up inside
 // the player address.
@@ -137,6 +137,15 @@ function megaId(value) {
     return MEGA_ID.test(id) ? id : null;
 }
 
+// Files.fm: the player address copied from Files.fm (Share > iframe). Only https links
+// on files.fm itself are accepted. Keep in sync with admin.js.
+function filesfmUrl(value) {
+    const url = safeUrl(value);
+    if (!url || url.length > 600) return null;
+    const host = new URL(url).hostname;
+    return host === "files.fm" || host.endsWith(".files.fm") ? url : null;
+}
+
 // The address of the in-page player for a movie, episode or part (or null).
 function embedSource(item) {
     const wistia = wistiaId(item.wistiaId);
@@ -144,6 +153,9 @@ function embedSource(item) {
 
     const mega = megaId(item.megaId);
     if (mega) return "https://mega.nz/embed/" + mega;
+
+    const filesfm = filesfmUrl(item.filesfmUrl);
+    if (filesfm) return filesfm;
 
     return null;
 }
@@ -996,7 +1008,7 @@ function showMovieDetails(movie) {
           )
         : null;
 
-    // Video player area (hidden until a Watch button for Wistia or MEGA is tapped).
+    // Video player area (hidden until a Watch button for Wistia, MEGA or Files.fm is tapped).
     const stage = el("section", { class: "wistia-stage", hidden: true });
     playEmbed = (src, label) => {
         stage.replaceChildren(
