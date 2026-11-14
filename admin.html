@@ -105,6 +105,7 @@
 <select id="f-hosting">
 <option value="r2">R2 (my own storage, default)</option>
 <option value="wistia">Wistia</option>
+<option value="mega">MEGA</option>
 </select>
 </label>
 
@@ -175,6 +176,7 @@
 <div id="parts-box" hidden>
 <h3>Parts</h3>
 <p class="wistia-hint" hidden>Wistia is selected: in each line, write the Wistia Media ID in the 3rd column instead of a watch link. The 4th column (download) stays a normal https link and is optional.</p>
+<p class="mega-hint" hidden>MEGA is selected: in each line, paste the MEGA link to that part in the 3rd column. Leave the 4th column empty to use the same MEGA link for Download.</p>
 <label class="field"><span>One part per line: number | title | watch link | download link</span>
 <textarea id="f-parts" placeholder="1 | Part 1 | https://watch-link | https://download-link&#10;2 | Part 2 | https://watch-link | https://download-link"></textarea>
 </label>
@@ -183,6 +185,7 @@
 <div id="seasons-box" hidden>
 <h3>Seasons</h3>
 <p class="wistia-hint" hidden>Wistia is selected: in each episode line, write the Wistia Media ID in the 3rd column instead of a watch link. The 4th column (download) stays a normal https link and is optional.</p>
+<p class="mega-hint" hidden>MEGA is selected: in each episode line, paste the MEGA link in the 3rd column. Leave the 4th column empty to use the same MEGA link for Download.</p>
 <div id="seasons-list"></div>
 <p><button id="add-season" class="btn btn-secondary" type="button">+ Add season</button></p>
 </div>
@@ -195,6 +198,10 @@
 <input id="f-wistiaId" type="text" placeholder="e.g. abc123xyz0" autocomplete="off">
 </label>
 
+<label class="field" id="mega-field" hidden><span>MEGA link to the video file</span>
+<input id="f-megaId" type="text" placeholder="https://mega.nz/file/XXXXXXXX#YYYYYYYY..." autocomplete="off">
+</label>
+
 <label class="field" id="watch-field"><span>Watch link (https), for a single-file movie</span>
 <input id="f-watchUrl" type="url" placeholder="https://">
 </label>
@@ -202,6 +209,7 @@
 <label class="field"><span>Download link (https), for a single-file movie</span>
 <input id="f-downloadUrl" type="url" placeholder="https://">
 </label>
+<p class="mega-hint" hidden>MEGA is selected: one link gives both Watch and Download. Leave the download link empty to use the MEGA link, or paste another link (for example R2) to use that for Download instead.</p>
 <p class="wistia-hint" hidden>Wistia is selected: Watch uses the Media ID above. For Download, paste a direct https link to the video file (from Wistia or from your R2 storage).</p>
 
 <label class="field"><span>YouTube trailer link</span>

@@ -34,6 +34,24 @@ const hostingSelect = $("f-hosting");
 // A Wistia Media ID: letters and numbers only (keep in sync with script.js).
 const WISTIA_ID = /^[A-Za-z0-9]{6,20}$/;
 const isWistia = () => hostingSelect.value === "wistia";
+const isMega = () => hostingSelect.value === "mega";
+
+// MEGA: accept a link to ONE video file (or "ID#KEY") and keep only "ID#KEY".
+const MEGA_ID = /^[A-Za-z0-9_-]{6,12}#[A-Za-z0-9_-]{20,64}$/; // keep in sync with script.js
+function parseMega(value) {
+    const v = String(value || "").trim();
+    const patterns = [
+        /^https:\/\/mega\.(?:nz|io)\/(?:file|embed)\/([A-Za-z0-9_-]{6,12})#([A-Za-z0-9_-]{20,64})$/,
+        /^https:\/\/mega\.(?:nz|io)\/#!([A-Za-z0-9_-]{6,12})!([A-Za-z0-9_-]{20,64})$/,
+        /^([A-Za-z0-9_-]{6,12})#([A-Za-z0-9_-]{20,64})$/
+    ];
+    for (const pattern of patterns) {
+        const m = v.match(pattern);
+        if (m) return m[1] + "#" + m[2];
+    }
+    return null;
+}
+const MEGA_ERROR = "paste a MEGA link to ONE video file (mega.nz/file/...), not a folder.";
 
 // Puts the watch value on a movie, part or episode: a link for R2, a Media ID for Wistia.
 // Returns an error text, or null when everything is fine.
@@ -46,6 +64,12 @@ function setWatch(item, value) {
         item.wistiaId = value;
         return null;
     }
+    if (isMega()) {
+        const id = parseMega(value);
+        if (!id) return MEGA_ERROR;
+        item.megaId = id;
+        return null;
+    }
     if (!isHttps(value)) return "links must start with https://";
     item.watchUrl = value;
     return null;
@@ -53,9 +77,13 @@ function setWatch(item, value) {
 
 function updateHostingUI() {
     const wistia = isWistia();
-    $("wistia-field").hidden = !(wistia && typeSelect.value === "movie");
-    $("watch-field").hidden = wistia;
+    const mega = isMega();
+    const single = typeSelect.value === "movie";
+    $("wistia-field").hidden = !(wistia && single);
+    $("mega-field").hidden = !(mega && single);
+    $("watch-field").hidden = wistia || mega;
     for (const hint of document.querySelectorAll(".wistia-hint")) hint.hidden = !wistia;
+    for (const hint of document.querySelectorAll(".mega-hint")) hint.hidden = !mega;
 }
 const seasonsBox = $("seasons-box");
 const seasonsList = $("seasons-list");
@@ -67,7 +95,7 @@ const requestCount = $("req-count");
 const TEXT_FIELDS = [
     "title", "genre", "releaseDate", "director", "cast",
     "description", "posterUrl", "watchUrl", "downloadUrl", "trailerUrl",
-    "interpreter", "interpreterPhotoUrl", "wistiaId"
+    "interpreter", "interpreterPhotoUrl", "wistiaId", "megaId"
 ];
 const BOOL_FIELDS = ["interpreted", "subtitled", "featured"];
 const NUMBER_FIELDS = ["year", "rating", "runtime"];
@@ -117,13 +145,13 @@ function updateTypeUI() {
 
 function episodesToText(list) {
     return (list || [])
-        .map(e => [e.number, e.title || "", e.wistiaId || e.watchUrl || "", e.downloadUrl || ""].join(" | "))
+        .map(e => [e.number, e.title || "", e.wistiaId || (e.megaId ? "https://mega.nz/file/" + e.megaId : "") || e.watchUrl || "", e.downloadUrl || ""].join(" | "))
         .join("\n");
 }
 
 function partsToText(list) {
     return (list || [])
-        .map(p => [p.number, p.title || "", p.wistiaId || p.watchUrl || "", p.downloadUrl || ""].join(" | "))
+        .map(p => [p.number, p.title || "", p.wistiaId || (p.megaId ? "https://mega.nz/file/" + p.megaId : "") || p.watchUrl || "", p.downloadUrl || ""].join(" | "))
         .join("\n");
 }
 
@@ -285,7 +313,7 @@ function fillForm(movie) {
             : Array.isArray(movie.parts) && movie.parts.length
               ? "parts"
               : "movie";
-    hostingSelect.value = movie.hosting === "wistia" ? "wistia" : "r2";
+    hostingSelect.value = movie.hosting === "wistia" || movie.hosting === "mega" ? movie.hosting : "r2";
     partsText.value = partsToText(movie.parts);
     seasonsList.replaceChildren();
     (movie.seasons || []).forEach(season => addSeasonRow(season));
@@ -577,22 +605,30 @@ movieForm.addEventListener("submit", async event => {
         data.type = "movie";
     }
 
-    // Hosting: "r2" (default) uses links, "wistia" uses Media IDs.
-    data.hosting = isWistia() ? "wistia" : "r2";
-    if (isWistia()) {
-        delete data.watchUrl; // Wistia titles use the Media ID instead of a watch link
-        if (typeSelect.value === "movie") {
-            if (!data.wistiaId) {
-                message(formMessage, "Enter the Wistia Media ID.", "error");
-                return;
-            }
-            if (!WISTIA_ID.test(data.wistiaId)) {
-                message(formMessage, "The Wistia Media ID looks wrong (letters and numbers only).", "error");
-                return;
-            }
+    // Hosting: "r2" (default) uses links, "wistia" uses Media IDs, "mega" uses MEGA file links.
+    data.hosting = isWistia() ? "wistia" : isMega() ? "mega" : "r2";
+    if (isWistia() || isMega()) delete data.watchUrl; // these titles do not use a watch link
+
+    if (isWistia() && typeSelect.value === "movie") {
+        if (!data.wistiaId) {
+            message(formMessage, "Enter the Wistia Media ID.", "error");
+            return;
+        }
+        if (!WISTIA_ID.test(data.wistiaId)) {
+            message(formMessage, "The Wistia Media ID looks wrong (letters and numbers only).", "error");
+            return;
         }
     }
+    if (isMega() && typeSelect.value === "movie") {
+        const id = parseMega(data.megaId);
+        if (!id) {
+            message(formMessage, "MEGA: " + MEGA_ERROR, "error");
+            return;
+        }
+        data.megaId = id;
+    }
     if (!isWistia() || typeSelect.value !== "movie") delete data.wistiaId;
+    if (!isMega() || typeSelect.value !== "movie") delete data.megaId;
 
     for (const name of URL_FIELDS) {
         if (data[name] && !isHttps(data[name])) {

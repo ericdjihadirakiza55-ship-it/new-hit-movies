@@ -120,22 +120,54 @@ function dlUrl(value) {
     return url.href;
 }
 
-// ---------- Wistia (second video host) ----------
-// A Wistia video is stored as a Media ID (not a link). Anything that does not look like
-// an ID is ignored, so nothing unexpected can end up inside the player address.
-const WISTIA_ID = /^[A-Za-z0-9]{6,20}$/; // keep in sync with admin.js
+// ---------- Wistia and MEGA (other video hosts) ----------
+// Videos on these hosts are stored as an ID (Wistia) or "ID#KEY" (MEGA), never as a free link.
+// Anything that does not look right is ignored, so nothing unexpected can end up inside
+// the player address.
+const WISTIA_ID = /^[A-Za-z0-9]{6,20}$/;                          // keep in sync with admin.js
+const MEGA_ID = /^[A-Za-z0-9_-]{6,12}#[A-Za-z0-9_-]{20,64}$/;     // keep in sync with admin.js
 
 function wistiaId(value) {
     const id = String(value || "").trim();
     return WISTIA_ID.test(id) ? id : null;
 }
 
-// The details page sets this each time it is drawn; Watch buttons call it.
-let playWistia = () => {};
+function megaId(value) {
+    const id = String(value || "").trim();
+    return MEGA_ID.test(id) ? id : null;
+}
 
-function wistiaButton(id, label, extraClass = "") {
-    const button = el("button", { class: ("btn " + extraClass).trim(), type: "button", text: label });
-    button.addEventListener("click", () => playWistia(id, label));
+// The address of the in-page player for a movie, episode or part (or null).
+function embedSource(item) {
+    const wistia = wistiaId(item.wistiaId);
+    if (wistia) return "https://fast.wistia.net/embed/iframe/" + encodeURIComponent(wistia) + "?autoPlay=true";
+
+    const mega = megaId(item.megaId);
+    if (mega) return "https://mega.nz/embed/" + mega;
+
+    return null;
+}
+
+// The Download link: the title's own download link, or (MEGA) the MEGA file link itself.
+function downloadLink(item) {
+    const own = dlUrl(item.downloadUrl);
+    if (own) return own;
+
+    const mega = megaId(item.megaId);
+    return mega ? "https://mega.nz/file/" + mega : null;
+}
+
+// Links that leave our own storage open in a new tab.
+function externalAttrs(href) {
+    return href.startsWith(MEDIA_HOST) ? {} : { target: "_blank", rel: "noopener noreferrer" };
+}
+
+// The details page sets this each time it is drawn; Watch buttons call it.
+let playEmbed = () => {};
+
+function embedButton(src, label) {
+    const button = el("button", { class: "btn", type: "button", text: label });
+    button.addEventListener("click", () => playEmbed(src, label));
     return button;
 }
 
@@ -194,19 +226,21 @@ function createParts(movie) {
         const number = part.number || i + 1;
         const buttons = el("div", { class: "episode-buttons" });
 
-        const partWistia = wistiaId(part.wistiaId);
+        const partEmbed = embedSource(part);
         const watch = safeUrl(part.watchUrl);
-        if (partWistia) {
-            buttons.appendChild(wistiaButton(partWistia, t("Part {n}", { n: number })));
+        if (partEmbed) {
+            buttons.appendChild(embedButton(partEmbed, t("Part {n}", { n: number })));
         } else if (watch) {
             buttons.appendChild(
                 el("a", { class: "btn", href: watch, target: "_blank", rel: "noopener noreferrer", text: t("Watch") })
             );
         }
 
-        const download = dlUrl(part.downloadUrl);
+        const download = downloadLink(part);
         if (download) {
-            buttons.appendChild(el("a", { class: "btn btn-secondary", href: download, text: t("Download") }));
+            buttons.appendChild(
+                el("a", { class: "btn btn-secondary", href: download, ...externalAttrs(download), text: t("Download") })
+            );
         }
 
         return el(
@@ -835,11 +869,11 @@ function createEpisodeList(season) {
     const items = episodes.map(ep => {
         const buttons = el("div", { class: "episode-buttons" });
 
-        const epWistia = wistiaId(ep.wistiaId);
+        const epEmbed = embedSource(ep);
         const watch = safeUrl(ep.watchUrl);
-        if (epWistia) {
+        if (epEmbed) {
             buttons.appendChild(
-                wistiaButton(epWistia, t("Season {s} · Episode {n}", { s: season.number, n: ep.number }))
+                embedButton(epEmbed, t("Season {s} · Episode {n}", { s: season.number, n: ep.number }))
             );
         } else if (watch) {
             buttons.appendChild(
@@ -853,12 +887,13 @@ function createEpisodeList(season) {
             );
         }
 
-        const download = dlUrl(ep.downloadUrl);
+        const download = downloadLink(ep);
         if (download) {
             buttons.appendChild(
                 el("a", {
                     class: "btn btn-secondary",
                     href: download,
+                    ...externalAttrs(download),
                     text: t("Download")
                 })
             );
@@ -961,16 +996,16 @@ function showMovieDetails(movie) {
           )
         : null;
 
-    // Wistia player area (hidden until a Wistia Watch button is tapped).
+    // Video player area (hidden until a Watch button for Wistia or MEGA is tapped).
     const stage = el("section", { class: "wistia-stage", hidden: true });
-    playWistia = (id, label) => {
+    playEmbed = (src, label) => {
         stage.replaceChildren(
             el("h2", { text: label === watchLabel(movie) ? title : title + " · " + label }),
             el(
                 "div",
                 { class: "wistia-frame" },
                 el("iframe", {
-                    src: "https://fast.wistia.net/embed/iframe/" + encodeURIComponent(id) + "?autoPlay=true",
+                    src,
                     title: title + " · " + label,
                     allow: "autoplay; fullscreen; picture-in-picture",
                     allowfullscreen: true,
@@ -985,10 +1020,10 @@ function showMovieDetails(movie) {
     // Action buttons.
     const actions = el("div", { class: "details-actions" });
 
-    const movieWistia = wistiaId(movie.wistiaId);
+    const movieEmbed = embedSource(movie);
     const watchUrl = safeUrl(movie.watchUrl);
-    if (movieWistia) {
-        actions.appendChild(wistiaButton(movieWistia, watchLabel(movie)));
+    if (movieEmbed) {
+        actions.appendChild(embedButton(movieEmbed, watchLabel(movie)));
     } else if (watchUrl) {
         actions.appendChild(
             el("a", {
@@ -1001,12 +1036,13 @@ function showMovieDetails(movie) {
         );
     }
 
-    const downloadUrl = dlUrl(movie.downloadUrl);
+    const downloadUrl = downloadLink(movie);
     if (downloadUrl) {
         actions.appendChild(
             el("a", {
                 class: "btn btn-secondary",
                 href: downloadUrl,
+                ...externalAttrs(downloadUrl),
                 text: downloadLabel(movie)
             })
         );
