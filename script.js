@@ -37,7 +37,7 @@ const untitled = () => t("Untitled movie");
 const SITE_NAME = "New Hit Movies";
 const DEFAULT_DESCRIPTION_EN =
     "Browse new and popular movies, watch trailers and find where to watch.";
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 8;
 
 const GENRE_LABELS = {
     action: "Action",
@@ -88,11 +88,10 @@ function safeUrl(value) {
     }
 }
 
-// ---------- Automatic image resizing ----------
-// Posters and photos on media.newhitmovie.store are served through Cloudflare Image
-// Transformations: resized to the size needed and sent as WebP/AVIF when the phone
-// supports it. If it is not switched on in Cloudflare, the original image is used instead.
-const IMAGE_RESIZE = true; // set to false to turn it off
+// ---------- Image delivery ----------
+// Direct media.newhitmovie.store URLs are used by default to avoid extra transform
+// latency on mobile networks. Set IMAGE_RESIZE = true only if you want /cdn-cgi/image/.
+const IMAGE_RESIZE = false;
 const MEDIA_HOST = "https://media.newhitmovie.store/";
 
 function sized(value, width, quality = 75) {
@@ -121,9 +120,6 @@ function dlUrl(value) {
 }
 
 // ---------- Wistia, MEGA and Files.fm (other video hosts) ----------
-// Videos on these hosts are stored as an ID (Wistia) or "ID#KEY" (MEGA), never as a free link.
-// Anything that does not look right is ignored, so nothing unexpected can end up inside
-// the player address.
 const WISTIA_ID = /^[A-Za-z0-9]{6,20}$/;                          // keep in sync with admin.js
 const MEGA_ID = /^[A-Za-z0-9_-]{6,12}#[A-Za-z0-9_-]{20,64}$/;     // keep in sync with admin.js
 
@@ -137,8 +133,6 @@ function megaId(value) {
     return MEGA_ID.test(id) ? id : null;
 }
 
-// Files.fm: the player address copied from Files.fm (Share > iframe). Only https links
-// on files.fm itself are accepted. Keep in sync with admin.js.
 function filesfmUrl(value) {
     const url = safeUrl(value);
     if (!url || url.length > 600) return null;
@@ -146,7 +140,6 @@ function filesfmUrl(value) {
     return host === "files.fm" || host.endsWith(".files.fm") ? url : null;
 }
 
-// The address of the in-page player for a movie, episode or part (or null).
 function embedSource(item) {
     const wistia = wistiaId(item.wistiaId);
     if (wistia) return "https://fast.wistia.net/embed/iframe/" + encodeURIComponent(wistia) + "?autoPlay=true";
@@ -160,7 +153,6 @@ function embedSource(item) {
     return null;
 }
 
-// The Download link: the title's own download link, or (MEGA) the MEGA file link itself.
 function downloadLink(item) {
     const own = dlUrl(item.downloadUrl);
     if (own) return own;
@@ -169,12 +161,10 @@ function downloadLink(item) {
     return mega ? "https://mega.nz/file/" + mega : null;
 }
 
-// Links that leave our own storage open in a new tab.
 function externalAttrs(href) {
     return href.startsWith(MEDIA_HOST) ? {} : { target: "_blank", rel: "noopener noreferrer" };
 }
 
-// The details page sets this each time it is drawn; Watch buttons call it.
 let playEmbed = () => {};
 
 function embedButton(src, label) {
@@ -183,7 +173,6 @@ function embedButton(src, label) {
     return button;
 }
 
-// One place to turn any YouTube link into a video ID.
 function getYouTubeId(value) {
     const href = safeUrl(value);
     if (!href) return null;
@@ -223,7 +212,6 @@ function getSeasons(movie) {
         : [];
 }
 
-// Movies uploaded in parts (Part 1, Part 2, ...) as ONE title.
 function getParts(movie) {
     return Array.isArray(movie.parts)
         ? [...movie.parts].sort((a, b) => (a.number || 0) - (b.number || 0))
@@ -297,7 +285,6 @@ function movieMeta(movie) {
     return parts.join(" · ");
 }
 
-// Small labels shown on cards and slides.
 function getBadges(movie) {
     const list = [];
     if (isSeries(movie)) list.push([t("Series"), "badge-series"]);
@@ -324,7 +311,7 @@ function setPageInfo(title, description) {
 /* ---------- Building blocks ---------- */
 
 function createPoster(movie, priority = false) {
-    const width = priority ? 600 : 400; // details page poster is bigger than a card
+    const width = priority ? 600 : 400;
     const poster = el("div", { class: "poster" });
     const posterUrl = safeUrl(movie.posterUrl);
 
@@ -346,7 +333,6 @@ function createPoster(movie, priority = false) {
 
     let retried = false;
     img.addEventListener("error", () => {
-        // First failure: try the original file. Second failure: show the placeholder.
         if (!retried && resizedSrc !== posterUrl) {
             retried = true;
             img.src = posterUrl;
@@ -360,7 +346,6 @@ function createPoster(movie, priority = false) {
     return poster;
 }
 
-// "🎙 VJ Name" line, shown on cards and slides of interpreted titles.
 function interpreterLine(movie) {
     if (movie.interpreted !== true || !movie.interpreter) return null;
     const photo = safeUrl(movie.interpreterPhotoUrl);
@@ -402,7 +387,7 @@ function createCard(movie) {
     );
 }
 
-function showSkeletons(count = 8) {
+function showSkeletons(count = 6) {
     const items = Array.from({ length: count }, () =>
         el("div", { class: "skeleton", "aria-hidden": "true" })
     );
@@ -411,12 +396,10 @@ function showSkeletons(count = 8) {
 
 /* ---------- Home: filter, sort, paginate ---------- */
 
-// Use the full release date when there is one, otherwise fall back to the year.
 function dateKey(movie) {
     return movie.releaseDate || (movie.year ? String(movie.year) : "");
 }
 
-// When the movie was added to the site (set by the admin page). Older entries have none.
 function addedKey(movie) {
     return Number(movie.addedAt) || 0;
 }
@@ -484,7 +467,6 @@ function fillGenreOptions() {
     );
 }
 
-
 /* ---------- Home rows (Newest, Top rated, Series) ---------- */
 
 const ROW_SIZE = 10;
@@ -532,7 +514,6 @@ function renderRows() {
     updateRowsVisibility();
 }
 
-// Rows only show on the plain home page, not while searching or filtering.
 function updateRowsVisibility() {
     const plain =
         !state.query &&
@@ -547,7 +528,6 @@ function updateRowsVisibility() {
 
 const SLIDE_COUNT = 5;
 
-// Titles ticked "Show in the top slider" come first, then the newest ones.
 function pickFeatured() {
     const sorted = [...state.movies].sort(SORTERS.newest);
     const chosen = sorted.filter(m => m.featured === true).slice(0, SLIDE_COUNT);
@@ -559,7 +539,6 @@ function pickFeatured() {
     return chosen;
 }
 
-// One slide of the hero: blurred background + poster card + text.
 function renderFeatured() {
     const picks = pickFeatured();
 
@@ -571,7 +550,6 @@ function renderFeatured() {
     const total = picks.length;
     let current = 0;
 
-    // Next visit: index.html reads this and starts downloading the poster immediately.
     try {
         const first = sized(picks[0].posterUrl, 520);
         if (first) localStorage.setItem("nhm-hero-poster", first);
@@ -592,17 +570,15 @@ function renderFeatured() {
         const detailsUrl = "#movie=" + encodeURIComponent(movie.id);
         const posterUrl = safeUrl(movie.posterUrl);
 
-        // Blurred background of the active poster.
         const bg = el("div", { class: "hero-bg" });
         bgs.push(bg);
 
-        // Poster card (centre card is big, the two neighbours are tilted behind it).
         const noPoster = () => el("span", { class: "hero-noposter", text: "🎞️" });
         const heroSrc = sized(posterUrl, 520);
         let face;
         if (posterUrl) {
             face = el("img", {
-                src: i === 0 ? heroSrc : null,   // the others load a moment later (see paint)
+                src: i === 0 ? heroSrc : null,
                 alt: t("{title} poster", { title: movie.title || t("Movie") }),
                 width: 300,
                 height: 450,
@@ -614,7 +590,7 @@ function renderFeatured() {
             face.addEventListener("error", () => {
                 if (face.dataset.retry !== "1" && heroSrc !== posterUrl) {
                     face.dataset.retry = "1";
-                    face.src = posterUrl; // resized version failed: use the original
+                    face.src = posterUrl;
                 } else {
                     face.replaceWith(noPoster());
                 }
@@ -628,7 +604,6 @@ function renderFeatured() {
             { class: "hero-card", href: detailsUrl, "aria-label": movie.title || untitled() },
             face
         );
-        // Tapping a side card brings it to the centre; tapping the centre card opens it.
         card.addEventListener("click", event => {
             if (i !== current) {
                 event.preventDefault();
@@ -637,7 +612,6 @@ function renderFeatured() {
         });
         cards.push(card);
 
-        // Text block.
         const tags = [];
         if (movie.featured === true) tags.push([t("Featured"), "hero-tag-red"]);
         const genre = genreLabel(movie.genre);
@@ -722,7 +696,6 @@ function renderFeatured() {
             )
         );
 
-        // Progress bar segment: it fills while the slide shows, then moves on.
         if (total > 1) {
             const seg = el(
                 "button",
@@ -755,7 +728,6 @@ function renderFeatured() {
         progress
     );
 
-    // Load images only when needed, so the first poster is not slowed down by the others.
     let sidesReady = false;
     function loadImages(i, pos) {
         const face = cards[i].firstElementChild;
@@ -795,7 +767,6 @@ function renderFeatured() {
             hero.classList.toggle("is-paused", hold.user || hold.hover || hold.focus);
         };
 
-        // The filling bar is the timer: when it ends, go to the next slide.
         progress.addEventListener("animationend", event => {
             if (event.animationName === "herofill") go(current + 1);
         });
@@ -814,7 +785,6 @@ function renderFeatured() {
             if (event.key === "ArrowRight") go(current + 1);
         });
 
-        // Swipe on phones.
         let startX = null;
         let startY = 0;
         stage.addEventListener("touchstart", event => {
@@ -840,8 +810,7 @@ function renderFeatured() {
     els.featured.replaceChildren(hero);
     els.featured.hidden = false;
 
-    // Side posters load right after the first one has had time to show.
-    setTimeout(() => { sidesReady = true; paint(); }, 800);
+    setTimeout(() => { sidesReady = true; paint(); }, 1000);
 }
 
 /* ---------- Details page ---------- */
@@ -924,7 +893,6 @@ function createEpisodeList(season) {
         );
     });
 
-    // Long seasons: show 30 episodes first, the rest on request (keeps taps fast on slow phones).
     const PAGE = 30;
     const list = el("ul", { class: "episode-list" }, ...items.slice(0, PAGE));
     if (items.length <= PAGE) return list;
@@ -975,7 +943,6 @@ function createSeasons(movie) {
         tabs.appendChild(button);
     });
 
-    // Open the first season by default so episodes are visible straight away.
     show(seasons[0], buttons[0]);
 
     return el("section", { class: "seasons" }, el("h2", { text: t("Seasons") }), tabs, panel);
@@ -984,7 +951,6 @@ function createSeasons(movie) {
 function showMovieDetails(movie) {
     const title = movie.title || untitled();
 
-    // Facts list (only shows fields that exist).
     const facts = [];
     if (movie.runtime) facts.push([t(isSeries(movie) ? "Episode length" : "Runtime"), t("{n} min", { n: movie.runtime })]);
     if (movie.director) facts.push([t(isSeries(movie) ? "Creator" : "Director"), movie.director]);
@@ -1008,7 +974,6 @@ function showMovieDetails(movie) {
           )
         : null;
 
-    // Video player area (hidden until a Watch button for Wistia, MEGA or Files.fm is tapped).
     const stage = el("section", { class: "wistia-stage", hidden: true });
     playEmbed = (src, label) => {
         stage.replaceChildren(
@@ -1029,7 +994,6 @@ function showMovieDetails(movie) {
         stage.scrollIntoView({ behavior: "smooth", block: "start" });
     };
 
-    // Action buttons.
     const actions = el("div", { class: "details-actions" });
 
     const movieEmbed = embedSource(movie);
@@ -1060,7 +1024,6 @@ function showMovieDetails(movie) {
         );
     }
 
-    // Trailer.
     const videoId = getYouTubeId(movie.trailerUrl);
     const trailer = videoId
         ? el(
@@ -1078,7 +1041,6 @@ function showMovieDetails(movie) {
           )
         : null;
 
-    // replaceChildren turns null into the text "null", so drop empty sections.
     const sections = [
         el("a", { class: "back-link", href: "#", text: t("← All titles") }),
         el(
@@ -1139,7 +1101,6 @@ function setView(view) {
     if (isDetails) {
         window.scrollTo({ top: 0, behavior: "instant" });
     } else {
-        // Remove the details page so a playing trailer stops.
         els.detailsView.replaceChildren();
         window.scrollTo({ top: savedScroll, behavior: "instant" });
     }
@@ -1200,7 +1161,6 @@ function route() {
 
 window.addEventListener("hashchange", route);
 
-// Remember where the person was on the list so Back returns there.
 window.addEventListener(
     "scroll",
     () => {
@@ -1211,7 +1171,6 @@ window.addEventListener(
 
 /* ---------- Events ---------- */
 
-// Search lives in the header: icon -> search bar with live suggestions.
 const siteHeader = document.querySelector(".site-header");
 const searchToggle = $("search-toggle");
 const searchPanel = $("search-panel");
@@ -1248,7 +1207,6 @@ function closeSearch() {
     if (els.search.value) resetSearchResults();
 }
 
-// Show all matches in the movie list below the banner.
 function showSearchResults() {
     hideSuggest();
     state.type = "all";
@@ -1388,19 +1346,20 @@ els.loadMore.addEventListener("click", () => {
 
 /* ---------- Load data ---------- */
 
-// Cache the movie list in the browser so repeat visits don't re-read Firestore.
 const CACHE_KEY = "nhm-movies-v3";
 const CACHE_MINUTES = 5;
 
-function readCache() {
+function readCacheEntry() {
     try {
         const raw = localStorage.getItem(CACHE_KEY);
         if (!raw) return null;
 
-        const { time, movies } = JSON.parse(raw);
+        const parsed = JSON.parse(raw);
+        if (!parsed || !Array.isArray(parsed.movies) || !parsed.movies.length) return null;
+
+        const time = Number(parsed.time) || 0;
         const fresh = Date.now() - time < CACHE_MINUTES * 60 * 1000;
-        // An empty list is never trusted, so a quiet moment never hides new movies.
-        return fresh && Array.isArray(movies) && movies.length ? movies : null;
+        return { movies: parsed.movies, fresh };
     } catch {
         return null;
     }
@@ -1419,58 +1378,71 @@ function writeCache(movies) {
     }
 }
 
+function applyMovies(movies) {
+    state.movies = movies;
+    state.loaded = true;
+
+    if (!state.movies.length) {
+        els.list.replaceChildren();
+        els.status.textContent = t("No movies available yet. Check back soon.");
+        els.status.hidden = false;
+        route();
+        return;
+    }
+
+    els.status.hidden = true;
+    fillGenreOptions();
+    renderFeatured();
+    renderRows();
+    renderList();
+    route();
+}
+
 let loadingMovies = false;
 
 async function loadMovies() {
     if (loadingMovies) return;
     loadingMovies = true;
 
-    showSkeletons();
-    els.status.hidden = false;
-    els.status.textContent = t("Loading movies...");
+    const cached = readCacheEntry();
+    const hadCachedMovies = Boolean(cached && cached.movies.length);
 
-    try {
-        let movies = readCache();
-
-        if (!movies) {
-            // Ask the server directly. A plain getDocs() quietly returns an EMPTY list when the
-            // phone is offline, which made the site say "No movies" after losing signal.
-            const snapshot = await getDocsFromServer(collection(db, "movies"));
-
-            // Keep the document ID so every movie has its own link.
-            movies = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-            writeCache(movies);
-        }
-
-        state.movies = movies;
-        state.loaded = true;
-
-        if (!state.movies.length) {
-            els.list.replaceChildren();
-            els.status.textContent = t("No movies available yet. Check back soon.");
-            route();
+    if (hadCachedMovies) {
+        applyMovies(cached.movies);
+        if (cached.fresh || !navigator.onLine) {
+            loadingMovies = false;
             return;
         }
+    } else {
+        showSkeletons();
+        els.status.hidden = false;
+        els.status.textContent = t("Loading movies...");
+    }
 
-        els.status.hidden = true;
-        fillGenreOptions();
-        renderFeatured();
-        renderRows();
-        renderList();
-        route();
+    try {
+        const snapshot = await getDocsFromServer(collection(db, "movies"));
+        const movies = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+
+        if (movies.length) {
+            writeCache(movies);
+            applyMovies(movies);
+        } else if (!hadCachedMovies) {
+            applyMovies([]);
+        }
     } catch (error) {
         console.error("Error loading movies:", error);
-        els.list.replaceChildren();
-        els.status.textContent = navigator.onLine
-            ? t("Movies could not be loaded. Check your connection and refresh the page.")
-            : t("You are offline. The movies will load when you are back online.");
-        els.status.hidden = false;
+        if (!hadCachedMovies) {
+            els.list.replaceChildren();
+            els.status.textContent = navigator.onLine
+                ? t("Movies could not be loaded. Check your connection and refresh the page.")
+                : t("You are offline. The movies will load when you are back online.");
+            els.status.hidden = false;
+        }
     } finally {
         loadingMovies = false;
     }
 }
 
-// Try again by itself when the connection comes back or the person returns to the page.
 function retryIfNeeded() {
     if (!state.loaded && !loadingMovies) loadMovies();
 }
@@ -1479,7 +1451,6 @@ document.addEventListener("visibilitychange", () => {
     if (!document.hidden) retryIfNeeded();
 });
 
-// When the visitor changes language, redraw the parts that script.js builds.
 window.addEventListener("nhm-lang", () => {
     if (state.loaded && state.movies.length) {
         fillGenreOptions();
